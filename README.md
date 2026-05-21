@@ -92,7 +92,13 @@ cmake --build --preset build-default
 
 ## Run
 
-Launch the game from the build directory:
+**From a release binary:** Download the archive for your platform from the [GitHub Releases](https://github.com/jsandas/captain-comic-refactor/releases) page. Windows and macOS binaries are self-contained — no SDL2 installation needed. Linux binaries link against system SDL2 and require the runtime libraries:
+
+```bash
+sudo apt-get install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0 libsdl2-mixer-2.0-0
+```
+
+**From a local build:** Launch from the build directory:
 
 ```bash
 ./build/captain_comic
