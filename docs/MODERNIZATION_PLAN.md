@@ -705,7 +705,7 @@ A centralized system for managing debug cheats and development tools. Activated 
   - [x] Windows — handled by `release.yml` via vcpkg + Visual Studio 17 2022
   - [x] macOS — handled by `release.yml` via Homebrew SDL2 packages
   - [x] Linux — handled by `release.yml` via apt SDL2 packages
-  - Note: No standalone shell scripts are needed; local builds use `cmake --preset default` (documented in README); CI/release builds live in `.github/workflows/`
+  - Note: No standalone shell scripts are needed; local builds normally use `cmake --preset default`, which requires CMake 3.23+; README should call out that minimum version and also document a non-preset configure/build path for older CMake versions. CI/release builds live in `.github/workflows/`
 - [x] Package assets
   - Original game assets are copyrighted and cannot be bundled
   - [x] Asset extraction tooling (`tools/extract_assets.py` + `tools/requirements.txt`) ships in every release archive

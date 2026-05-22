@@ -31,7 +31,7 @@ On first setup, you also need to extract the original game assets into the local
 
 ## Requirements
 
-- CMake 3.16+
+- CMake 3.23+
 - A C++17 compiler
 - SDL2 development packages
 - SDL2_image development packages
@@ -67,7 +67,7 @@ After extraction, `assets/` contains the converted PNG, GIF, map, and sound file
 ### macOS
 
 ```bash
-brew install sdl2 sdl2_image sdl2_ttf sdl2_mixer python
+brew install cmake pkg-config sdl2 sdl2_image sdl2_ttf sdl2_mixer python
 cmake --preset default
 cmake --build --preset build-default
 ```
@@ -75,17 +75,17 @@ cmake --build --preset build-default
 ### Linux
 
 ```bash
-sudo apt-get install cmake g++ libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev python3 python3-pip
+sudo apt-get install cmake g++ pkg-config libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev python3 python3-pip
 cmake --preset default
 cmake --build --preset build-default
 ```
 
 ### Windows
 
-Use vcpkg, Visual Studio, or another CMake-capable toolchain with SDL2, SDL2_image, SDL2_ttf, and SDL2_mixer available.
+Use vcpkg, Visual Studio, or another CMake-capable toolchain with SDL2, SDL2_image, SDL2_ttf, and SDL2_mixer available. The documented and tested vcpkg setup uses the `x64-windows-static` triplet.
 
 ```bash
-vcpkg install sdl2 sdl2-image sdl2-ttf sdl2-mixer
+vcpkg install --triplet x64-windows-static sdl2 sdl2-image sdl2-ttf sdl2-mixer
 cmake --preset default
 cmake --build --preset build-default
 ```
