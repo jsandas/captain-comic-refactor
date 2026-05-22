@@ -51,7 +51,7 @@ jobs:
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
-          brew install cmake sdl2 sdl2_image sdl2_mixer sdl2_ttf pkg-config
+          brew install cmake sdl2 sdl2_image sdl2_mixer sdl2_ttf pkg-config dylibbundler
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
@@ -77,6 +77,12 @@ jobs:
         run: |
           cmake --build build --config Release
 
+      - name: Bundle dylibs (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p build/libs
+          dylibbundler -od -b -x build/captain_comic -d build/libs/ -p @executable_path/libs/
+
       - name: Package (Linux/macOS)
         if: runner.os != 'Windows'
         shell: bash
@@ -87,6 +93,9 @@ jobs:
           mkdir -p "dist" "package/${pkg}" "package/${pkg}/tools"
 
           cp build/captain_comic "package/${pkg}/"
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            cp -r build/libs "package/${pkg}/libs"
+          fi
           cp README.md "package/${pkg}/"
           cp tools/extract_assets.py "package/${pkg}/tools/"
           cp tools/requirements.txt "package/${pkg}/tools/"

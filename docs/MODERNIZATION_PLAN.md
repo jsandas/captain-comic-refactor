@@ -696,25 +696,35 @@ A centralized system for managing debug cheats and development tools. Activated 
 **Goal:** Prepare for distribution
 
 **Tasks:**
-- [ ] Write comprehensive README
-  - [ ] Building instructions
-  - [ ] Running the game
-  - [ ] Controls
-  - [ ] Credits
-- [ ] Create build scripts for all platforms
-  - [ ] Windows (Visual Studio / MinGW)
-  - [ ] macOS (Xcode / clang)
-  - [ ] Linux (GCC)
-- [ ] Package assets
-  - [ ] Include original game assets (if permissible)
-  - [ ] Asset extraction tools if needed
-- [ ] License considerations
-  - [ ] Code licensing (MIT/GPL)
-  - [ ] Asset ownership clarification
-- [ ] Distribution
-  - [ ] GitHub releases
-  - [ ] Binaries for each platform
-  - [ ] Installation instructions
+- [x] Write comprehensive README
+  - [x] Building instructions
+  - [x] Running the game
+  - [x] Controls
+  - [x] Credits
+- [x] Create build scripts for all platforms
+  - [x] Windows — handled by `.github/workflows/release.yml` via vcpkg + Visual Studio 17 2022
+  - [x] macOS — handled by `.github/workflows/release.yml` via Homebrew SDL2 packages
+  - [x] Linux — handled by `.github/workflows/release.yml` via apt SDL2 packages
+  - Note: No standalone shell scripts are needed; local builds normally use `cmake --preset default`, which requires CMake 3.23+; README should call out that minimum version and also document a non-preset configure/build path for older CMake versions. CI/release builds live in `.github/workflows/`
+- [x] Package assets
+  - Original game assets are copyrighted and cannot be bundled
+  - [x] Asset extraction tooling (`tools/extract_assets.py` + `tools/requirements.txt`) ships in every release archive
+  - [x] `ASSET_EXTRACTION.md` is generated into each release package with step-by-step instructions
+  - [x] README documents the extraction workflow for local builds
+- [x] License considerations
+  - [x] Code licensing: MIT — permissive license covering the C++17 source code
+    in this repository. See `LICENSE` in the repo root.
+    - Alternative considered: GPL v2/v3 (used by Chocolate Doom, Quakespasm,
+      etc.) would require derivative works to remain open-source. MIT was chosen
+      for simplicity and maximum reuse.
+  - [x] Asset ownership: All original game assets (graphics, sounds, level data,
+    tile maps) are Copyright 1990 by Michael A. Denio. This project does not
+    distribute those assets. Users must supply original game files; see README
+    and the extraction tooling in `tools/`.
+- [x] Distribution
+  - [x] GitHub releases — `.github/workflows/release.yml` builds and publishes binaries on `v*` tag push
+  - [x] Binaries for each platform — linux-x64, macos-arm64, windows-x64
+  - [x] Installation instructions — covered in README (Quick Start + Assets sections)
 
 **Deliverables:**
 - Complete, playable game
