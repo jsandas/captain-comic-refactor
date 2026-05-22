@@ -702,9 +702,9 @@ A centralized system for managing debug cheats and development tools. Activated 
   - [x] Controls
   - [x] Credits
 - [x] Create build scripts for all platforms
-  - [x] Windows — handled by `release.yml` via vcpkg + Visual Studio 17 2022
-  - [x] macOS — handled by `release.yml` via Homebrew SDL2 packages
-  - [x] Linux — handled by `release.yml` via apt SDL2 packages
+  - [x] Windows — handled by `.github/workflows/release.yml` via vcpkg + Visual Studio 17 2022
+  - [x] macOS — handled by `.github/workflows/release.yml` via Homebrew SDL2 packages
+  - [x] Linux — handled by `.github/workflows/release.yml` via apt SDL2 packages
   - Note: No standalone shell scripts are needed; local builds normally use `cmake --preset default`, which requires CMake 3.23+; README should call out that minimum version and also document a non-preset configure/build path for older CMake versions. CI/release builds live in `.github/workflows/`
 - [x] Package assets
   - Original game assets are copyrighted and cannot be bundled
@@ -722,7 +722,7 @@ A centralized system for managing debug cheats and development tools. Activated 
     distribute those assets. Users must supply original game files; see README
     and the extraction tooling in `tools/`.
 - [x] Distribution
-  - [x] GitHub releases — `release.yml` builds and publishes binaries on `v*` tag push
+  - [x] GitHub releases — `.github/workflows/release.yml` builds and publishes binaries on `v*` tag push
   - [x] Binaries for each platform — linux-x64, macos-arm64, windows-x64
   - [x] Installation instructions — covered in README (Quick Start + Assets sections)
 
