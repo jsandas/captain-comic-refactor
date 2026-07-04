@@ -1,14 +1,17 @@
 #include "../include/title_sequence.h"
-#include "../include/graphics.h"
-#include "../include/audio.h"
+
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
+
+#include "../include/audio.h"
+#include "../include/graphics.h"
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -21,17 +24,17 @@ constexpr int FADE_STEP_DELAY_MS = 55;
 constexpr int TITLE_DISPLAY_MS = 770;
 
 // Asset filenames (pre-converted PNGs from EGA originals)
-static const char* TITLE_SCREEN_FILE   = "sys000.ega.png";  // Title image
-static const char* STORY_SCREEN_FILE   = "sys001.ega.png";  // Story image
-static const char* GAME_UI_FILE        = "sys003.ega.png";  // In-game HUD background
-static const char* ITEMS_SCREEN_FILE   = "sys004.ega.png";  // Items/controls screen
+static const char* TITLE_SCREEN_FILE = "sys000.ega.png";        // Title image
+static const char* STORY_SCREEN_FILE = "sys001.ega.png";        // Story image
+static const char* GAME_UI_FILE = "sys003.ega.png";             // In-game HUD background
+static const char* ITEMS_SCREEN_FILE = "sys004.ega.png";        // Items/controls screen
 static const char* HIGH_SCORES_SCREEN_FILE = "sys005.ega.png";  // Hall of Fame background
 
 // High scores constants
-static constexpr const char* HIGH_SCORES_FILENAME  = "COMIC.HGH";
-static constexpr const char* HIGH_SCORES_MAGIC     = "CCHG1";
-static constexpr int MAX_HIGH_SCORES               = 10;
-static constexpr int MAX_NAME_LENGTH               = 15;
+static constexpr const char* HIGH_SCORES_FILENAME = "COMIC.HGH";
+static constexpr const char* HIGH_SCORES_MAGIC = "CCHG1";
+static constexpr int MAX_HIGH_SCORES = 10;
+static constexpr int MAX_NAME_LENGTH = 15;
 
 // ---------------------------------------------------------------------------
 // Module state
@@ -40,14 +43,8 @@ static constexpr int MAX_NAME_LENGTH               = 15;
 // HUD texture retained for gameplay rendering
 static SDL_Texture* s_hud_texture = nullptr;
 
-static const InputBindings DEFAULT_INPUT_BINDINGS = {
-    SDLK_LEFT,
-    SDLK_RIGHT,
-    SDLK_SPACE,
-    SDLK_LCTRL,
-    SDLK_LALT,
-    SDLK_t
-};
+static const InputBindings DEFAULT_INPUT_BINDINGS = {SDLK_LEFT,  SDLK_RIGHT, SDLK_SPACE,
+                                                     SDLK_LCTRL, SDLK_LALT,  SDLK_t};
 
 static InputBindings s_input_bindings = DEFAULT_INPUT_BINDINGS;
 
@@ -71,13 +68,13 @@ static SDL_Surface* s_items_surface = nullptr;
  * Returns nullptr on failure.
  */
 static SDL_Surface* load_fullscreen_paletted_surface(GraphicsSystem* graphics,
-                                                      const char* filename) {
+                                                     const char* filename) {
     std::string path = graphics->get_asset_path(filename);
 
     SDL_Surface* surface = IMG_Load(path.c_str());
     if (!surface) {
-        std::cerr << "Title sequence: failed to load " << filename
-                  << " (" << IMG_GetError() << ")" << std::endl;
+        std::cerr << "Title sequence: failed to load " << filename << " (" << IMG_GetError() << ")"
+                  << std::endl;
         return nullptr;
     }
 
@@ -94,13 +91,12 @@ static SDL_Surface* load_fullscreen_paletted_surface(GraphicsSystem* graphics,
 /**
  * Create a texture from a paletted surface with optional palette modifications.
  */
-static SDL_Texture* surface_to_texture(SDL_Renderer* renderer,
-                                       SDL_Surface* surface) {
+static SDL_Texture* surface_to_texture(SDL_Renderer* renderer, SDL_Surface* surface) {
     // Convert paletted surface to RGBA for rendering
     SDL_Surface* converted = SDL_ConvertSurfaceFormat(surface, SDL_PIXELFORMAT_RGBA32, 0);
     if (!converted) {
-        std::cerr << "Title sequence: failed to convert surface format: "
-                  << SDL_GetError() << std::endl;
+        std::cerr << "Title sequence: failed to convert surface format: " << SDL_GetError()
+                  << std::endl;
         return nullptr;
     }
 
@@ -108,8 +104,7 @@ static SDL_Texture* surface_to_texture(SDL_Renderer* renderer,
     SDL_FreeSurface(converted);
 
     if (!texture) {
-        std::cerr << "Title sequence: failed to create texture: "
-                  << SDL_GetError() << std::endl;
+        std::cerr << "Title sequence: failed to create texture: " << SDL_GetError() << std::endl;
     }
 
     return texture;
@@ -136,7 +131,8 @@ static SDL_Texture* surface_to_texture(SDL_Renderer* renderer,
 static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surface,
                                      const char* filename) {
     if (!surface || !surface->format || !surface->format->palette) {
-        std::cerr << "Warning: " << filename << ": surface is not paletted, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename << ": surface is not paletted, skipping fade effect"
+                  << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -150,30 +146,25 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     constexpr int REQUIRED_PALETTE_SIZE = PALETTE_REG_TITLE + 1;
     if (pal->ncolors < REQUIRED_PALETTE_SIZE) {
-        std::cerr << "Warning: " << filename
-                  << ": palette has only " << pal->ncolors
-                  << " colors (need at least " << REQUIRED_PALETTE_SIZE
-                  << "), skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename << ": palette has only " << pal->ncolors
+                  << " colors (need at least " << REQUIRED_PALETTE_SIZE << "), skipping fade effect"
+                  << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
     // Store original palette colors for restoration.
-    SDL_Color orig_colors[3] = {
-        surface->format->palette->colors[PALETTE_REG_BACKGROUND],
-        surface->format->palette->colors[PALETTE_REG_ITEMS],
-        surface->format->palette->colors[PALETTE_REG_TITLE]
-    };
+    SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
+                                surface->format->palette->colors[PALETTE_REG_ITEMS],
+                                surface->format->palette->colors[PALETTE_REG_TITLE]};
 
     // Helper: Convert 6-bit EGA color to 8-bit RGB
-    auto ega_to_rgb = [](uint8_t ega_6bit) -> uint8_t {
-        return (ega_6bit << 2) | (ega_6bit >> 4);
-    };
+    auto ega_to_rgb = [](uint8_t ega_6bit) -> uint8_t { return (ega_6bit << 2) | (ega_6bit >> 4); };
 
     // Define palette values in 6-bit EGA format, converted to 8-bit
-    constexpr uint8_t DARK_GRAY_6BIT = 0x18;  // ~39% gray
-    constexpr uint8_t LIGHT_GRAY_6BIT = 0x07; // ~11% gray
-    constexpr uint8_t WHITE_6BIT = 0x1f;      // 100% white
-    constexpr uint8_t GREEN_6BIT = 0x02;      // dark green
+    constexpr uint8_t DARK_GRAY_6BIT = 0x18;     // ~39% gray
+    constexpr uint8_t LIGHT_GRAY_6BIT = 0x07;    // ~11% gray
+    constexpr uint8_t WHITE_6BIT = 0x1f;         // 100% white
+    constexpr uint8_t GREEN_6BIT = 0x02;         // dark green
     constexpr uint8_t BRIGHT_GREEN_6BIT = 0x1a;  // 110010 in binary
     constexpr uint8_t BRIGHT_RED_6BIT = 0x1c;    // 011100 in binary
 
@@ -198,7 +189,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     SDL_Texture* tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 1, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 1, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -239,7 +231,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 2, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 2, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -266,7 +259,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 3, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 3, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -293,7 +287,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 4, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 4, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -320,7 +315,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 5, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 5, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -347,7 +343,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     tex = surface_to_texture(renderer, surface);
     if (!tex) {
-        std::cerr << "Warning: " << filename << ": texture creation failed at step 6, skipping fade effect" << std::endl;
+        std::cerr << "Warning: " << filename
+                  << ": texture creation failed at step 6, skipping fade effect" << std::endl;
         return true;  // Non-fatal: skip fade, continue sequence
     }
 
@@ -474,11 +471,9 @@ static void destroy_text_lines(std::vector<RenderedTextLine>& lines) {
     lines.clear();
 }
 
-static std::vector<RenderedTextLine> build_text_lines(SDL_Renderer* renderer,
-                                                      TTF_Font* font,
+static std::vector<RenderedTextLine> build_text_lines(SDL_Renderer* renderer, TTF_Font* font,
                                                       const std::vector<std::string>& lines,
-                                                      SDL_Color color,
-                                                      int max_line_width) {
+                                                      SDL_Color color, int max_line_width) {
     std::vector<RenderedTextLine> rendered_lines;
     rendered_lines.reserve(lines.size());
 
@@ -494,22 +489,19 @@ static std::vector<RenderedTextLine> build_text_lines(SDL_Renderer* renderer,
             continue;
         }
 
-        SDL_Surface* surface = TTF_RenderText_Blended_Wrapped(
-            font,
-            line_text.c_str(),
-            color,
-            static_cast<Uint32>(max_line_width));
+        SDL_Surface* surface = TTF_RenderText_Blended_Wrapped(font, line_text.c_str(), color,
+                                                              static_cast<Uint32>(max_line_width));
         if (!surface) {
-            std::cerr << "Startup notice: failed to render text line: "
-                      << TTF_GetError() << std::endl;
+            std::cerr << "Startup notice: failed to render text line: " << TTF_GetError()
+                      << std::endl;
             destroy_text_lines(rendered_lines);
             return rendered_lines;
         }
 
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
         if (!texture) {
-            std::cerr << "Startup notice: failed to create text texture: "
-                      << SDL_GetError() << std::endl;
+            std::cerr << "Startup notice: failed to create text texture: " << SDL_GetError()
+                      << std::endl;
             SDL_FreeSurface(surface);
             destroy_text_lines(rendered_lines);
             return rendered_lines;
@@ -528,14 +520,9 @@ static std::vector<RenderedTextLine> build_text_lines(SDL_Renderer* renderer,
 }
 
 static void render_text_lines_centered(SDL_Renderer* renderer,
-                                       const std::vector<RenderedTextLine>& lines,
-                                       int top_margin,
-                                       int line_spacing,
-                                       SDL_Color background_color) {
-    SDL_SetRenderDrawColor(renderer,
-                           background_color.r,
-                           background_color.g,
-                           background_color.b,
+                                       const std::vector<RenderedTextLine>& lines, int top_margin,
+                                       int line_spacing, SDL_Color background_color) {
+    SDL_SetRenderDrawColor(renderer, background_color.r, background_color.g, background_color.b,
                            background_color.a);
     SDL_RenderClear(renderer);
 
@@ -566,8 +553,7 @@ static TTF_Font* open_startup_notice_font() {
         return nullptr;
     }
 
-    auto try_open_font_candidate = [](const std::string& path,
-                                      int size,
+    auto try_open_font_candidate = [](const std::string& path, int size,
                                       bool try_indices) -> TTF_Font* {
         TTF_Font* font = TTF_OpenFont(path.c_str(), size);
         if (font) {
@@ -593,23 +579,18 @@ static TTF_Font* open_startup_notice_font() {
 
     const std::vector<std::string> font_candidates = {
         // macOS common monospace/system fonts
-        "/System/Library/Fonts/Menlo.ttc",
-        "/System/Library/Fonts/Courier.ttc",
-        "/System/Library/Fonts/Monaco.ttf",
-        "/System/Library/Fonts/SFNSMono.ttf",
+        "/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Courier.ttc",
+        "/System/Library/Fonts/Monaco.ttf", "/System/Library/Fonts/SFNSMono.ttf",
         "/System/Library/Fonts/Supplemental/Andale Mono.ttf",
         "/System/Library/Fonts/Supplemental/Courier New.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/Library/Fonts/Menlo.ttc",
+        "/System/Library/Fonts/Supplemental/Arial.ttf", "/Library/Fonts/Menlo.ttc",
 
         // Linux common monospace fonts
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
 
         // Windows common monospace fonts
-        "C:\\Windows\\Fonts\\lucidaconsole.ttf",
-        "C:\\Windows\\Fonts\\consola.ttf"
-    };
+        "C:\\Windows\\Fonts\\lucidaconsole.ttf", "C:\\Windows\\Fonts\\consola.ttf"};
 
     constexpr int STARTUP_NOTICE_FONT_SIZE = 24;
     for (const std::string& path : font_candidates) {
@@ -624,8 +605,7 @@ static TTF_Font* open_startup_notice_font() {
     return nullptr;
 }
 
-static bool run_modal_text_screen(SDL_Renderer* renderer,
-                                  TTF_Font* font,
+static bool run_modal_text_screen(SDL_Renderer* renderer, TTF_Font* font,
                                   const std::vector<std::string>& lines) {
     constexpr SDL_Color TEXT_COLOR = {170, 170, 170, 255};
     constexpr SDL_Color BACKGROUND = {0, 0, 0, 255};
@@ -651,12 +631,8 @@ static bool run_modal_text_screen(SDL_Renderer* renderer,
             }
         }
 
-        render_text_lines_centered(
-            renderer,
-            rendered_lines,
-            layout.top,
-            layout.line_spacing,
-            BACKGROUND);
+        render_text_lines_centered(renderer, rendered_lines, layout.top, layout.line_spacing,
+                                   BACKGROUND);
         SDL_Delay(16);
     }
 }
@@ -665,30 +641,19 @@ static std::vector<std::string> build_keyboard_setup_lines(const InputBindings& 
                                                            int action_index,
                                                            const std::string& status_line,
                                                            bool is_confirm_mode) {
-    const std::vector<std::string> action_names = {
-        "Move Left",
-        "Move Right",
-        "Jump",
-        "Fireball",
-        "Open Door",
-        "Teleport"
-    };
+    const std::vector<std::string> action_names = {"Move Left", "Move Right", "Jump",
+                                                   "Fireball",  "Open Door",  "Teleport"};
 
     const std::vector<SDL_Keycode> action_keys = {
-        draft.move_left,
-        draft.move_right,
-        draft.jump,
-        draft.fire,
-        draft.open_door,
-        draft.teleport
-    };
+        draft.move_left, draft.move_right, draft.jump, draft.fire, draft.open_door, draft.teleport};
 
     std::vector<std::string> lines;
     lines.push_back("Keyboard Setup");
     lines.push_back("");
 
     const int total_actions = static_cast<int>(action_names.size());
-    const bool prompt_for_action = !is_confirm_mode && action_index >= 0 && action_index < total_actions;
+    const bool prompt_for_action =
+        !is_confirm_mode && action_index >= 0 && action_index < total_actions;
 
     if (!prompt_for_action) {
         lines.push_back("Review bindings");
@@ -724,19 +689,12 @@ static SDL_Keycode canonicalize_binding_key(SDL_Keycode key) {
     }
 }
 
-static bool key_is_already_assigned(const InputBindings& bindings,
-                                    SDL_Keycode key,
+static bool key_is_already_assigned(const InputBindings& bindings, SDL_Keycode key,
                                     int current_action_index) {
     const SDL_Keycode canonical_key = canonicalize_binding_key(key);
 
-    const SDL_Keycode keys[] = {
-        bindings.move_left,
-        bindings.move_right,
-        bindings.jump,
-        bindings.fire,
-        bindings.open_door,
-        bindings.teleport
-    };
+    const SDL_Keycode keys[] = {bindings.move_left, bindings.move_right, bindings.jump,
+                                bindings.fire,      bindings.open_door,  bindings.teleport};
 
     constexpr int NUM_ACTIONS = static_cast<int>(sizeof(keys) / sizeof(keys[0]));
     for (int i = 0; i < NUM_ACTIONS; ++i) {
@@ -753,34 +711,38 @@ static bool key_is_already_assigned(const InputBindings& bindings,
 
 static void set_binding_for_action(InputBindings& bindings, int action_index, SDL_Keycode key) {
     switch (action_index) {
-        case 0: bindings.move_left = key; break;
-        case 1: bindings.move_right = key; break;
-        case 2: bindings.jump = key; break;
-        case 3: bindings.fire = key; break;
-        case 4: bindings.open_door = key; break;
-        case 5: bindings.teleport = key; break;
-        default: break;
+        case 0:
+            bindings.move_left = key;
+            break;
+        case 1:
+            bindings.move_right = key;
+            break;
+        case 2:
+            bindings.jump = key;
+            break;
+        case 3:
+            bindings.fire = key;
+            break;
+        case 4:
+            bindings.open_door = key;
+            break;
+        case 5:
+            bindings.teleport = key;
+            break;
+        default:
+            break;
     }
 }
 
 static bool input_bindings_equal(const InputBindings& lhs, const InputBindings& rhs) {
-    return lhs.move_left == rhs.move_left &&
-           lhs.move_right == rhs.move_right &&
-           lhs.jump == rhs.jump &&
-           lhs.fire == rhs.fire &&
-           lhs.open_door == rhs.open_door &&
+    return lhs.move_left == rhs.move_left && lhs.move_right == rhs.move_right &&
+           lhs.jump == rhs.jump && lhs.fire == rhs.fire && lhs.open_door == rhs.open_door &&
            lhs.teleport == rhs.teleport;
 }
 
 static bool validate_input_bindings(const InputBindings& bindings, std::string* error_message) {
-    const SDL_Keycode keys[] = {
-        bindings.move_left,
-        bindings.move_right,
-        bindings.jump,
-        bindings.fire,
-        bindings.open_door,
-        bindings.teleport
-    };
+    const SDL_Keycode keys[] = {bindings.move_left, bindings.move_right, bindings.jump,
+                                bindings.fire,      bindings.open_door,  bindings.teleport};
 
     for (const SDL_Keycode key : keys) {
         if (key == SDLK_UNKNOWN) {
@@ -830,7 +792,6 @@ static bool run_keyboard_setup_menu(SDL_Renderer* renderer, TTF_Font* font) {
     };
 
     while (true) {
-
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) {
                 clear_cached_lines();
@@ -854,26 +815,18 @@ static bool run_keyboard_setup_menu(SDL_Renderer* renderer, TTF_Font* font) {
                     set_input_bindings(draft);
                     const bool saved_ok = save_input_bindings_to_file();
                     if (saved_ok) {
-                        if (!run_modal_text_screen(renderer, font,
-                                                   {
-                                                       "Keyboard Setup",
-                                                       "",
-                                                       "Bindings saved to KEYS.DEF",
-                                                       "",
-                                                       "Press any key to continue"
-                                                   })) {
+                        if (!run_modal_text_screen(
+                                renderer, font,
+                                {"Keyboard Setup", "", "Bindings saved to KEYS.DEF", "",
+                                 "Press any key to continue"})) {
                             clear_cached_lines();
                             return false;
                         }
                     } else {
-                        if (!run_modal_text_screen(renderer, font,
-                                                   {
-                                                       "Keyboard Setup",
-                                                       "",
-                                                       "Error: could not save KEYS.DEF",
-                                                       "",
-                                                       "Press any key to continue"
-                                                   })) {
+                        if (!run_modal_text_screen(
+                                renderer, font,
+                                {"Keyboard Setup", "", "Error: could not save KEYS.DEF", "",
+                                 "Press any key to continue"})) {
                             clear_cached_lines();
                             return false;
                         }
@@ -901,12 +854,10 @@ static bool run_keyboard_setup_menu(SDL_Renderer* renderer, TTF_Font* font) {
 
         const bool is_confirm_mode = action_index >= 6;
 
-        const bool should_rebuild_cache =
-            !cache_valid ||
-            cached_action_index != action_index ||
-            cached_confirm_mode != is_confirm_mode ||
-            cached_status_line != status_line ||
-            !input_bindings_equal(cached_draft, draft);
+        const bool should_rebuild_cache = !cache_valid || cached_action_index != action_index ||
+                                          cached_confirm_mode != is_confirm_mode ||
+                                          cached_status_line != status_line ||
+                                          !input_bindings_equal(cached_draft, draft);
 
         if (should_rebuild_cache) {
             std::vector<std::string> lines =
@@ -930,12 +881,8 @@ static bool run_keyboard_setup_menu(SDL_Renderer* renderer, TTF_Font* font) {
             cached_confirm_mode = is_confirm_mode;
         }
 
-        render_text_lines_centered(
-            renderer,
-            cached_rendered_lines,
-            cached_layout.top,
-            cached_layout.line_spacing,
-            BACKGROUND);
+        render_text_lines_centered(renderer, cached_rendered_lines, cached_layout.top,
+                                   cached_layout.line_spacing, BACKGROUND);
         SDL_Delay(16);
     }
 }
@@ -972,9 +919,8 @@ struct HighScoreEntry {
 };
 
 uint32_t score_bytes_to_uint32(const uint8_t score_bytes[3]) {
-    return static_cast<uint32_t>(score_bytes[2]) * 10000u
-         + static_cast<uint32_t>(score_bytes[1]) * 100u
-         + static_cast<uint32_t>(score_bytes[0]);
+    return static_cast<uint32_t>(score_bytes[2]) * 10000u +
+           static_cast<uint32_t>(score_bytes[1]) * 100u + static_cast<uint32_t>(score_bytes[0]);
 }
 
 static std::string get_pref_high_scores_path() {
@@ -1083,12 +1029,9 @@ static int find_insertion_rank(const std::vector<HighScoreEntry>& scores, uint32
 
 // Build a temporary scores list for display during name entry,
 // with a placeholder inserted at the given rank.
-static std::vector<HighScoreEntry> build_preview_list(
-    const std::vector<HighScoreEntry>& scores,
-    int rank,
-    uint32_t player_score,
-    const std::string& current_input)
-{
+static std::vector<HighScoreEntry> build_preview_list(const std::vector<HighScoreEntry>& scores,
+                                                      int rank, uint32_t player_score,
+                                                      const std::string& current_input) {
     std::vector<HighScoreEntry> preview = scores;
     const std::string placeholder_name = current_input.empty() ? "_" : current_input + "_";
     preview.insert(preview.begin() + std::min(rank, static_cast<int>(preview.size())),
@@ -1103,12 +1046,9 @@ static std::vector<HighScoreEntry> build_preview_list(
 // highlight_rank: 0-based index of the new entry (>= MAX_HIGH_SCORES = no highlight).
 // is_entering_name: true while the player is typing their name.
 // prompt_suffix: current name being typed (with cursor if is_entering_name).
-static std::vector<std::string> build_high_scores_lines(
-    const std::vector<HighScoreEntry>& scores,
-    int highlight_rank,
-    bool is_entering_name,
-    const std::string& prompt_suffix)
-{
+static std::vector<std::string> build_high_scores_lines(const std::vector<HighScoreEntry>& scores,
+                                                        int highlight_rank, bool is_entering_name,
+                                                        const std::string& prompt_suffix) {
     std::vector<std::string> lines;
     lines.push_back("HALL OF FAME");
     lines.push_back("");
@@ -1122,11 +1062,8 @@ static std::vector<std::string> build_high_scores_lines(
         char buf[80];
         if (i < static_cast<int>(scores.size())) {
             const bool is_new = (i == highlight_rank);
-            std::snprintf(buf, sizeof(buf), "%s%2d. %06u  %-15s",
-                          is_new ? ">>" : "  ",
-                          i + 1,
-                          scores[i].score,
-                          scores[i].name.c_str());
+            std::snprintf(buf, sizeof(buf), "%s%2d. %06u  %-15s", is_new ? ">>" : "  ", i + 1,
+                          scores[i].score, scores[i].name.c_str());
         } else {
             std::snprintf(buf, sizeof(buf), "   %2d. ------  ---------------", i + 1);
         }
@@ -1170,19 +1107,15 @@ struct HighScoreTextCache {
         max_w = 0;
     }
 
-    ~HighScoreTextCache() {
-        clear();
-    }
+    ~HighScoreTextCache() { clear(); }
 };
 
-static void build_high_score_text_cache(SDL_Renderer* renderer,
-                                        TTF_Font* font,
-                                        const std::vector<std::string>& lines,
-                                        int max_line_width,
+static void build_high_score_text_cache(SDL_Renderer* renderer, TTF_Font* font,
+                                        const std::vector<std::string>& lines, int max_line_width,
                                         HighScoreTextCache& cache) {
-    constexpr SDL_Color COLOR_NORMAL  = {200, 200, 200, 255};
-    constexpr SDL_Color COLOR_TITLE   = {255, 255,   0, 255};
-    constexpr SDL_Color COLOR_NEW     = {255, 200,   0, 255};
+    constexpr SDL_Color COLOR_NORMAL = {200, 200, 200, 255};
+    constexpr SDL_Color COLOR_TITLE = {255, 255, 0, 255};
+    constexpr SDL_Color COLOR_NEW = {255, 200, 0, 255};
     constexpr int LINE_GAP = 2;
 
     cache.clear();
@@ -1201,8 +1134,8 @@ static void build_high_score_text_cache(SDL_Renderer* renderer,
             } else if (!lines[i].empty() && lines[i][0] == '>') {
                 color = COLOR_NEW;
             }
-            SDL_Surface* surf = TTF_RenderText_Blended_Wrapped(
-                font, lines[i].c_str(), color, static_cast<Uint32>(max_line_width));
+            SDL_Surface* surf = TTF_RenderText_Blended_Wrapped(font, lines[i].c_str(), color,
+                                                               static_cast<Uint32>(max_line_width));
             if (surf) {
                 rl.tex = SDL_CreateTextureFromSurface(renderer, surf);
                 rl.w = surf->w;
@@ -1219,12 +1152,9 @@ static void build_high_score_text_cache(SDL_Renderer* renderer,
 // Render one frame of the high scores screen.
 // Clears the renderer, draws the background texture (if any), then overlays
 // a semi-transparent block of text, and calls SDL_RenderPresent.
-static void render_high_scores_frame(SDL_Renderer* renderer,
-                                     SDL_Texture* bg_texture,
-                                     TTF_Font* font,
-                                     const std::vector<std::string>& lines,
-                                     HighScoreTextCache* text_cache = nullptr)
-{
+static void render_high_scores_frame(SDL_Renderer* renderer, SDL_Texture* bg_texture,
+                                     TTF_Font* font, const std::vector<std::string>& lines,
+                                     HighScoreTextCache* text_cache = nullptr) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
@@ -1244,8 +1174,7 @@ static void render_high_scores_frame(SDL_Renderer* renderer,
 
     HighScoreTextCache local_cache;
     HighScoreTextCache* cache = text_cache ? text_cache : &local_cache;
-    if (cache->rendered.empty() ||
-        cache->max_line_width != max_line_width ||
+    if (cache->rendered.empty() || cache->max_line_width != max_line_width ||
         cache->lines != lines) {
         build_high_score_text_cache(renderer, font, lines, max_line_width, *cache);
     }
@@ -1261,12 +1190,8 @@ static void render_high_scores_frame(SDL_Renderer* renderer,
         top_y = 20;
     }
 
-    SDL_Rect box = {
-        (output_w - max_w) / 2 - PADDING,
-        top_y - PADDING,
-        max_w + PADDING * 2,
-        total_h + PADDING * 2
-    };
+    SDL_Rect box = {(output_w - max_w) / 2 - PADDING, top_y - PADDING, max_w + PADDING * 2,
+                    total_h + PADDING * 2};
     if (box.x < 0) box.x = 0;
     if (box.w > output_w) box.w = output_w;
 
@@ -1297,13 +1222,10 @@ struct NameCaptureResult {
 // Prompt the player to type their name (up to MAX_NAME_LENGTH printable ASCII chars).
 // Renders the score preview with the name being typed each frame.
 // Returns the confirmed name, "-" on Esc/empty input, and flags user_quit on SDL_QUIT.
-static NameCaptureResult capture_name_input(SDL_Renderer* renderer,
-                                            SDL_Texture* bg_texture,
+static NameCaptureResult capture_name_input(SDL_Renderer* renderer, SDL_Texture* bg_texture,
                                             TTF_Font* font,
-                                            const std::vector<HighScoreEntry>& scores,
-                                            int rank,
-                                            uint32_t player_score)
-{
+                                            const std::vector<HighScoreEntry>& scores, int rank,
+                                            uint32_t player_score) {
     NameCaptureResult result;
     std::string name;
     HighScoreTextCache text_cache;
@@ -1321,8 +1243,7 @@ static NameCaptureResult capture_name_input(SDL_Renderer* renderer,
 
             if (e.type == SDL_TEXTINPUT) {
                 for (unsigned char c : std::string(e.text.text)) {
-                    if (c >= 32u && c < 127u &&
-                        static_cast<int>(name.size()) < MAX_NAME_LENGTH) {
+                    if (c >= 32u && c < 127u && static_cast<int>(name.size()) < MAX_NAME_LENGTH) {
                         name += static_cast<char>(c);
                     }
                 }
@@ -1372,17 +1293,11 @@ static NameCaptureResult capture_name_input(SDL_Renderer* renderer,
 // Public API
 // ---------------------------------------------------------------------------
 
-const InputBindings& get_input_bindings() {
-    return s_input_bindings;
-}
+const InputBindings& get_input_bindings() { return s_input_bindings; }
 
-void reset_input_bindings_to_defaults() {
-    s_input_bindings = DEFAULT_INPUT_BINDINGS;
-}
+void reset_input_bindings_to_defaults() { s_input_bindings = DEFAULT_INPUT_BINDINGS; }
 
-void set_input_bindings(const InputBindings& bindings) {
-    s_input_bindings = bindings;
-}
+void set_input_bindings(const InputBindings& bindings) { s_input_bindings = bindings; }
 
 bool load_input_bindings_from_file() {
     const std::string pref_path = get_pref_key_bindings_path();
@@ -1443,18 +1358,14 @@ bool load_input_bindings_from_file() {
     }
 
     InputBindings loaded = {
-        static_cast<SDL_Keycode>(move_left),
-        static_cast<SDL_Keycode>(move_right),
-        static_cast<SDL_Keycode>(jump),
-        static_cast<SDL_Keycode>(fire),
-        static_cast<SDL_Keycode>(open_door),
-        static_cast<SDL_Keycode>(teleport)
-    };
+        static_cast<SDL_Keycode>(move_left), static_cast<SDL_Keycode>(move_right),
+        static_cast<SDL_Keycode>(jump),      static_cast<SDL_Keycode>(fire),
+        static_cast<SDL_Keycode>(open_door), static_cast<SDL_Keycode>(teleport)};
 
     std::string validation_error;
     if (!validate_input_bindings(loaded, &validation_error)) {
-        std::cerr << "Input bindings: invalid mapping in " << path
-                  << " (" << validation_error << ")" << std::endl;
+        std::cerr << "Input bindings: invalid mapping in " << path << " (" << validation_error
+                  << ")" << std::endl;
         return false;
     }
 
@@ -1480,10 +1391,9 @@ bool save_input_bindings_to_file() {
     output << KEY_BINDINGS_MAGIC << "\n";
     output << static_cast<int32_t>(bindings.move_left) << " "
            << static_cast<int32_t>(bindings.move_right) << " "
-           << static_cast<int32_t>(bindings.jump) << " "
-           << static_cast<int32_t>(bindings.fire) << " "
-            << static_cast<int32_t>(bindings.open_door) << " "
-            << static_cast<int32_t>(bindings.teleport) << "\n";
+           << static_cast<int32_t>(bindings.jump) << " " << static_cast<int32_t>(bindings.fire)
+           << " " << static_cast<int32_t>(bindings.open_door) << " "
+           << static_cast<int32_t>(bindings.teleport) << "\n";
 
     if (!output.good()) {
         std::cerr << "Input bindings: failed while writing " << path << std::endl;
@@ -1502,15 +1412,13 @@ bool run_startup_notice(SDL_Renderer* renderer, GraphicsSystem* graphics) {
         return true;
     }
 
-    const std::vector<std::string> startup_lines = {
-        "Captain Comic",
-        "",
-        "Press K for Keyboard setup",
-        "Press J for Joystick calibration",
-        "Press R for Registration info",
-        "Press ESC to quit",
-        "Press any other key to continue"
-    };
+    const std::vector<std::string> startup_lines = {"Captain Comic",
+                                                    "",
+                                                    "Press K for Keyboard setup",
+                                                    "Press J for Joystick calibration",
+                                                    "Press R for Registration info",
+                                                    "Press ESC to quit",
+                                                    "Press any other key to continue"};
 
     constexpr SDL_Color TEXT_COLOR = {170, 170, 170, 255};
     constexpr SDL_Color BACKGROUND = {0, 0, 0, 255};
@@ -1548,29 +1456,21 @@ bool run_startup_notice(SDL_Renderer* renderer, GraphicsSystem* graphics) {
                         }
                         break;
                     case SDLK_j:
-                        if (!run_modal_text_screen(renderer, font,
-                                                   {
-                                                       "Joystick Calibration",
-                                                       "",
-                                                       "Not yet implemented",
-                                                       "",
-                                                       "Press any key to return"
-                                                   })) {
+                        if (!run_modal_text_screen(
+                                renderer, font,
+                                {"Joystick Calibration", "", "Not yet implemented", "",
+                                 "Press any key to return"})) {
                             destroy_text_lines(rendered_startup);
                             TTF_CloseFont(font);
                             return false;
                         }
                         break;
                     case SDLK_r:
-                        if (!run_modal_text_screen(renderer, font,
-                                                   {
-                                                       "Registration",
-                                                       "",
-                                                       "Captain Comic Modernization",
-                                                       "Original game by Michael A. Denio",
-                                                       "",
-                                                       "Press any key to return"
-                                                   })) {
+                        if (!run_modal_text_screen(
+                                renderer, font,
+                                {"Registration", "", "Captain Comic Modernization",
+                                 "Original game by Michael A. Denio", "",
+                                 "Press any key to return"})) {
                             destroy_text_lines(rendered_startup);
                             TTF_CloseFont(font);
                             return false;
@@ -1584,12 +1484,8 @@ bool run_startup_notice(SDL_Renderer* renderer, GraphicsSystem* graphics) {
         }
 
         if (keep_running) {
-            render_text_lines_centered(
-                renderer,
-                rendered_startup,
-                layout.top,
-                layout.line_spacing,
-                BACKGROUND);
+            render_text_lines_centered(renderer, rendered_startup, layout.top, layout.line_spacing,
+                                       BACKGROUND);
             SDL_Delay(16);
         }
     }
@@ -1758,9 +1654,7 @@ bool run_title_sequence(SDL_Renderer* renderer, GraphicsSystem* graphics) {
     return true;
 }
 
-SDL_Texture* get_hud_texture() {
-    return s_hud_texture;
-}
+SDL_Texture* get_hud_texture() { return s_hud_texture; }
 
 bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
                             const uint8_t* score_bytes_in) {
@@ -1773,8 +1667,8 @@ bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
             bg_texture = SDL_CreateTextureFromSurface(renderer, surface);
             SDL_FreeSurface(surface);
         } else {
-            std::cerr << "High scores: could not load background "
-                      << HIGH_SCORES_SCREEN_FILE << std::endl;
+            std::cerr << "High scores: could not load background " << HIGH_SCORES_SCREEN_FILE
+                      << std::endl;
         }
     }
 
@@ -1823,7 +1717,7 @@ bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
 
     SDL_Event e;
     bool user_quit = false;
-    bool any_key   = false;
+    bool any_key = false;
 
     // Drain stale events so the player must press a fresh key.
     while (SDL_PollEvent(&e)) {
@@ -1834,8 +1728,14 @@ bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
 
     while (!any_key && !user_quit) {
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) { user_quit = true; break; }
-            if (e.type == SDL_KEYDOWN && e.key.repeat == 0) { any_key = true; break; }
+            if (e.type == SDL_QUIT) {
+                user_quit = true;
+                break;
+            }
+            if (e.type == SDL_KEYDOWN && e.key.repeat == 0) {
+                any_key = true;
+                break;
+            }
         }
         if (!any_key && !user_quit) {
             render_high_scores_frame(renderer, bg_texture, font, display_lines, &text_cache);

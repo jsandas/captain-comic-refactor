@@ -1,4 +1,5 @@
 #include "test_helpers.h"
+
 #include <cstring>
 
 #if defined(HAVE_SDL2_MIXER)
@@ -75,7 +76,7 @@ void reset_physics_state() {
     comic_y = 14;
     comic_y_vel = 0;
     comic_x_momentum = 0;
-    comic_facing = 1; // RIGHT
+    comic_facing = 1;  // RIGHT
     comic_animation = 0;
     comic_is_falling_or_jumping = 0;
     comic_jump_power = JUMP_POWER_DEFAULT;
@@ -86,7 +87,7 @@ void reset_physics_state() {
     key_state_right = 0;
     key_state_open = 0;
     camera_x = 0;
-    
+
     // Reset door/level state too
     comic_has_door_key = 0;
     current_level_number = 1;
@@ -94,12 +95,12 @@ void reset_physics_state() {
     current_level_ptr = nullptr;
     source_door_level_number = -1;
     source_door_stage_number = -1;
-    
+
     game_over_triggered = false;
     comic_num_lives = 3;
     comic_hp = MAX_HP;
     comic_hp_pending_increase = 0;
-    
+
     score_bytes[0] = 0;
     score_bytes[1] = 0;
     score_bytes[2] = 0;
@@ -119,7 +120,8 @@ void reset_door_state() {
     g_skip_load_on_door = true;
 }
 
-level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level, uint8_t target_stage) {
+level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level,
+                                     uint8_t target_stage) {
     static level_t test_level;
     std::memset(&test_level, 0, sizeof(test_level));
     test_level.stages[0].doors[0].x = door_x;

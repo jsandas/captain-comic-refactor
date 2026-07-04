@@ -1,16 +1,19 @@
 #include "../include/graphics.h"
-#include "../include/cheats.h"
-#include "../include/physics.h"
-#include "../include/level.h"
+
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
-#include <cstdio>
-#include <iostream>
-#include <fstream>
-#include <unordered_set>
-#include <iomanip>
-#include <sstream>
+
 #include <algorithm>
+#include <cstdio>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <unordered_set>
+
+#include "../include/cheats.h"
+#include "../include/level.h"
+#include "../include/physics.h"
 
 // External game state (defined in main.cpp)
 extern int comic_x;
@@ -25,11 +28,10 @@ extern int camera_x;
 // Global graphics system
 GraphicsSystem* g_graphics = nullptr;
 
-GraphicsSystem::GraphicsSystem(SDL_Renderer* renderer) : renderer(renderer), img_inited(false), ttf_inited(false), debug_font(nullptr) {}
+GraphicsSystem::GraphicsSystem(SDL_Renderer* renderer)
+    : renderer(renderer), img_inited(false), ttf_inited(false), debug_font(nullptr) {}
 
-GraphicsSystem::~GraphicsSystem() {
-    cleanup();
-}
+GraphicsSystem::~GraphicsSystem() { cleanup(); }
 
 bool GraphicsSystem::initialize() {
     // Initialize SDL_image
@@ -39,7 +41,7 @@ bool GraphicsSystem::initialize() {
         return false;
     }
     img_inited = true;
-    
+
     // Initialize SDL_ttf
     if (TTF_Init() < 0) {
         std::cerr << "SDL_ttf initialization failed: " << TTF_GetError() << std::endl;
@@ -48,28 +50,24 @@ bool GraphicsSystem::initialize() {
         return false;
     }
     ttf_inited = true;
-    
+
     // Try to load a monospace font for debug overlay
     // Try multiple possible font paths and names
     std::string font_candidates[] = {
         // macOS system fonts
-        "/System/Library/Fonts/Menlo.ttc",
-        "/System/Library/Fonts/Courier.ttc",
-        "/System/Library/Fonts/SFNSMono.ttf",
-        "/Library/Fonts/Menlo.ttc",
-        
+        "/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Courier.ttc",
+        "/System/Library/Fonts/SFNSMono.ttf", "/Library/Fonts/Menlo.ttc",
+
         // Linux fonts
         "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        
+
         // Windows fonts
-        "C:\\Windows\\Fonts\\lucidaconsole.ttf",
-        "C:\\Windows\\Fonts\\consola.ttf",
-        
+        "C:\\Windows\\Fonts\\lucidaconsole.ttf", "C:\\Windows\\Fonts\\consola.ttf",
+
         // Bundled fonts
-        "assets/fonts/monospace.ttf"
-    };
-    
+        "assets/fonts/monospace.ttf"};
+
     const int debug_font_size = 12;
     for (const auto& font_path : font_candidates) {
         debug_font = TTF_OpenFont(font_path.c_str(), debug_font_size);
@@ -77,12 +75,15 @@ bool GraphicsSystem::initialize() {
             break;
         }
     }
-    
+
     if (debug_font == nullptr) {
-        std::cerr << "Warning: Could not load debug font, debug overlay will not display coordinates" << std::endl;
-        std::cerr << "  Tried: Menlo, Courier, DejaVuSansMono, LiberationMono, and others" << std::endl;
+        std::cerr
+            << "Warning: Could not load debug font, debug overlay will not display coordinates"
+            << std::endl;
+        std::cerr << "  Tried: Menlo, Courier, DejaVuSansMono, LiberationMono, and others"
+                  << std::endl;
     }
-    
+
     return true;
 }
 
@@ -149,16 +150,12 @@ std::string GraphicsSystem::get_asset_path(const std::string& filename) {
 TextureInfo GraphicsSystem::load_png(const std::string& filepath) {
     TextureInfo info = {nullptr, 0, 0};
     static std::unordered_set<std::string> logged_load_failures;
-    
+
     // Try multiple possible paths
-    std::string possible_paths[] = {
-        filepath,
-        "../" + filepath,
-        "../../" + filepath
-    };
-    
+    std::string possible_paths[] = {filepath, "../" + filepath, "../../" + filepath};
+
     SDL_Surface* surface = nullptr;
-    
+
     for (const auto& path : possible_paths) {
         // Check if file exists
         std::ifstream f(path);
@@ -168,34 +165,33 @@ TextureInfo GraphicsSystem::load_png(const std::string& filepath) {
                 break;
             }
             if (logged_load_failures.insert(path).second) {
-                std::cerr << "Warning: Failed to load PNG: " << path
-                          << " (" << IMG_GetError() << ")" << std::endl;
+                std::cerr << "Warning: Failed to load PNG: " << path << " (" << IMG_GetError()
+                          << ")" << std::endl;
             }
         }
     }
-    
+
     if (surface == nullptr) {
         // Silently return null texture - caller will handle missing assets
         return info;
     }
-    
+
     info.texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (info.texture == nullptr) {
         std::cerr << "Failed to create texture from surface: " << SDL_GetError() << std::endl;
         SDL_FreeSurface(surface);
         return info;
     }
-    
+
     info.width = surface->w;
     info.height = surface->h;
-    
+
     SDL_FreeSurface(surface);
     return info;
 }
 
-std::vector<uint8_t> build_enemy_animation_sequence(
-    uint8_t num_distinct_frames,
-    uint8_t animation_type) {
+std::vector<uint8_t> build_enemy_animation_sequence(uint8_t num_distinct_frames,
+                                                    uint8_t animation_type) {
     std::vector<uint8_t> sequence;
     if (num_distinct_frames == 0) {
         return sequence;
@@ -215,10 +211,9 @@ std::vector<uint8_t> build_enemy_animation_sequence(
     return sequence;
 }
 
-std::vector<TextureInfo> GraphicsSystem::load_animation_frames(
-    const std::string& base_path,
-    int expected_frames,
-    const std::string& label) {
+std::vector<TextureInfo> GraphicsSystem::load_animation_frames(const std::string& base_path,
+                                                               int expected_frames,
+                                                               const std::string& label) {
     std::vector<TextureInfo> frames;
     if (renderer == nullptr) {
         std::cerr << "Warning: Renderer unavailable; cannot load animation: " << label << std::endl;
@@ -231,10 +226,8 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(
 
     // Try multiple asset directory prefixes.  enemy frames live under assets/shp, so
     // include that directory first.  We keep the generic locations as fallback.
-    static const std::string prefixes[] = {
-        "assets/shp/", "../assets/shp/", "../../assets/shp/",
-        "assets/", "../assets/", "../../assets/"
-    };
+    static const std::string prefixes[] = {"assets/shp/", "../assets/shp/", "../../assets/shp/",
+                                           "assets/",     "../assets/",     "../../assets/"};
 
     auto cleanup_frames = [](std::vector<TextureInfo>& f) {
         for (auto& info : f) {
@@ -259,13 +252,13 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(
             if (surface != nullptr) {
                 break;
             }
-            std::cerr << "Warning: Failed to load animation frame: " << path
-                      << " (" << IMG_GetError() << ")" << std::endl;
+            std::cerr << "Warning: Failed to load animation frame: " << path << " ("
+                      << IMG_GetError() << ")" << std::endl;
         }
 
         if (surface == nullptr) {
-            std::cerr << "Error: Could not find frame " << i
-                      << " for '" << label << "' (tried " << filename << ")" << std::endl;
+            std::cerr << "Error: Could not find frame " << i << " for '" << label << "' (tried "
+                      << filename << ")" << std::endl;
             cleanup_frames(frames);
             return frames;
         }
@@ -276,8 +269,8 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(
         SDL_FreeSurface(surface);
 
         if (texture == nullptr) {
-            std::cerr << "Error: Failed to create animation texture for '" << label
-                      << "' frame " << i << ": " << SDL_GetError() << std::endl;
+            std::cerr << "Error: Failed to create animation texture for '" << label << "' frame "
+                      << i << ": " << SDL_GetError() << std::endl;
             cleanup_frames(frames);
             return frames;
         }
@@ -292,22 +285,22 @@ bool GraphicsSystem::load_tileset(const std::string& level_name) {
     if (tilesets.find(level_name) != tilesets.end()) {
         return true;
     }
-    
+
     Tileset tileset;
     int missing_count = 0;
     int loaded_count = 0;
     std::string first_missing;
-    
+
     // Load all tiles (0x00-0x7F / 0-127) for the level
     // Some levels have up to 87 tiles, so we try to load 128 to be safe
     // Missing tiles beyond what exists is expected and not an error
     for (int i = 0; i < 128; i++) {
         char tile_name[64];
         std::snprintf(tile_name, sizeof(tile_name), "%s.tt2-%02x.png", level_name.c_str(), i);
-        
+
         std::string filepath = get_asset_path(tile_name);
         TextureInfo texture = load_png(filepath);
-        
+
         if (texture.texture != nullptr) {
             tileset.tiles[i] = texture;
             loaded_count++;
@@ -318,21 +311,19 @@ bool GraphicsSystem::load_tileset(const std::string& level_name) {
             }
         }
     }
-    
+
     if (tileset.tiles.empty()) {
         std::cerr << "Error: Failed to load any tiles for tileset: " << level_name << std::endl;
         return false;
     }
 
     if (missing_count > 0) {
-        std::cerr << "Warning: Tileset '" << level_name << "' missing "
-                  << missing_count << " tile(s)"
-                  << " (loaded " << loaded_count << ")"
-                  << (first_missing.empty() ? "" : ", e.g. ")
-                  << (first_missing.empty() ? "" : first_missing)
-                  << std::endl;
+        std::cerr << "Warning: Tileset '" << level_name << "' missing " << missing_count
+                  << " tile(s)"
+                  << " (loaded " << loaded_count << ")" << (first_missing.empty() ? "" : ", e.g. ")
+                  << (first_missing.empty() ? "" : first_missing) << std::endl;
     }
-    
+
     tilesets[level_name] = tileset;
 
     // Apply any previously configured blackout state to newly loaded tiles.
@@ -382,7 +373,7 @@ bool GraphicsSystem::load_sprite(const std::string& sprite_name, const std::stri
     if (sprites.find(key) != sprites.end()) {
         return true;
     }
-    
+
     std::string filename;
     if (direction.empty()) {
         filename = "sprite-" + sprite_name + ".png";
@@ -390,18 +381,18 @@ bool GraphicsSystem::load_sprite(const std::string& sprite_name, const std::stri
         filename = "sprite-" + sprite_name + "_" + direction + ".png";
     }
     std::string filepath = get_asset_path(filename);
-    
+
     TextureInfo texture = load_png(filepath);
     if (texture.texture == nullptr) {
         std::cerr << "Warning: Missing sprite asset: " << filename << std::endl;
         return false;
     }
-    
+
     Sprite sprite;
     sprite.texture = texture;
     sprite.width = texture.width;
     sprite.height = texture.height;
-    
+
     sprites[key] = sprite;
     return true;
 }
@@ -433,9 +424,9 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     }
 
     std::ostringstream cache_key;
-    cache_key << sprite_name << ":" << static_cast<int>(sprite_desc.num_distinct_frames)
-              << ":" << static_cast<int>(sprite_desc.horizontal)
-              << ":" << static_cast<int>(sprite_desc.animation);
+    cache_key << sprite_name << ":" << static_cast<int>(sprite_desc.num_distinct_frames) << ":"
+              << static_cast<int>(sprite_desc.horizontal) << ":"
+              << static_cast<int>(sprite_desc.animation);
 
     // Check if already loaded
     auto it = enemy_sprites.find(cache_key.str());
@@ -446,17 +437,11 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     // Load per-frame PNGs: {sprite_name}-left-0.png, -1.png, etc.
     auto* animation_data = new SpriteAnimationData();
     animation_data->frames_left = load_animation_frames(
-        sprite_name + "-left",
-        sprite_desc.num_distinct_frames,
-        sprite_name + ":left"
-    );
+        sprite_name + "-left", sprite_desc.num_distinct_frames, sprite_name + ":left");
 
     if (sprite_desc.horizontal == ENEMY_HORIZONTAL_SEPARATE) {
         animation_data->frames_right = load_animation_frames(
-            sprite_name + "-right",
-            sprite_desc.num_distinct_frames,
-            sprite_name + ":right"
-        );
+            sprite_name + "-right", sprite_desc.num_distinct_frames, sprite_name + ":right");
     }
 
     if (animation_data->frames_left.empty()) {
@@ -481,8 +466,8 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
         if (animation_data->frames_left.size() != animation_data->frames_right.size()) {
             std::cerr << "Warning: Animation frame count mismatch for " << sprite_name
                       << " (left=" << animation_data->frames_left.size()
-                      << ", right=" << animation_data->frames_right.size()
-                      << "), truncating to " << distinct_frames << std::endl;
+                      << ", right=" << animation_data->frames_right.size() << "), truncating to "
+                      << distinct_frames << std::endl;
             // Destroy excess textures before truncating to avoid leaks
             for (size_t i = distinct_frames; i < animation_data->frames_left.size(); ++i) {
                 if (animation_data->frames_left[i].texture) {
@@ -506,8 +491,7 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     // is a safety guard rather than an expected runtime condition.
     animation_data->frame_sequence = build_enemy_animation_sequence(
         static_cast<uint8_t>(std::min(distinct_frames, static_cast<size_t>(255))),
-        sprite_desc.animation
-    );
+        sprite_desc.animation);
 
     if (animation_data->frame_sequence.empty()) {
         for (auto& frame : animation_data->frames_left) {
@@ -528,12 +512,14 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     return animation_data;
 }
 
-Animation GraphicsSystem::create_animation(const std::vector<std::string>& sprite_names, const std::string& direction, int frame_duration_ms, bool looping) {
+Animation GraphicsSystem::create_animation(const std::vector<std::string>& sprite_names,
+                                           const std::string& direction, int frame_duration_ms,
+                                           bool looping) {
     Animation anim;
     anim.looping = looping;
     anim.frame_start_time = SDL_GetTicks();
     int safe_duration_ms = frame_duration_ms > 0 ? frame_duration_ms : 1;
-    
+
     for (const auto& sprite_name : sprite_names) {
         if (load_sprite(sprite_name, direction)) {
             Sprite* sprite = get_sprite(sprite_name, direction);
@@ -545,7 +531,7 @@ Animation GraphicsSystem::create_animation(const std::vector<std::string>& sprit
             }
         }
     }
-    
+
     return anim;
 }
 
@@ -592,14 +578,15 @@ void GraphicsSystem::update_animation(Animation& anim, uint32_t current_time) {
     anim.current_frame = static_cast<int>(anim.frames.size()) - 1;
 }
 
-void GraphicsSystem::render_tile(int screen_x, int screen_y, Tileset* tileset, uint8_t tile_id, int scale) {
+void GraphicsSystem::render_tile(int screen_x, int screen_y, Tileset* tileset, uint8_t tile_id,
+                                 int scale) {
     if (tileset == nullptr) return;
-    
+
     auto it = tileset->tiles.find(tile_id);
     if (it == tileset->tiles.end()) return;
-    
+
     const TextureInfo& texture = it->second;
-    int pixel_size = scale * 2; // 2 game units per tile
+    int pixel_size = scale * 2;  // 2 game units per tile
     SDL_Rect dst_rect = {screen_x, screen_y, pixel_size, pixel_size};
     SDL_RenderCopy(renderer, texture.texture, nullptr, &dst_rect);
 }
@@ -610,25 +597,26 @@ void GraphicsSystem::render_sprite(int screen_x, int screen_y, const Sprite& spr
     SDL_RenderCopyEx(renderer, sprite.texture.texture, nullptr, &dst_rect, 0, nullptr, flip);
 }
 
-void GraphicsSystem::render_sprite_scaled(int screen_x, int screen_y, const Sprite& sprite, int width, int height, bool flip_h) {
+void GraphicsSystem::render_sprite_scaled(int screen_x, int screen_y, const Sprite& sprite,
+                                          int width, int height, bool flip_h) {
     SDL_Rect dst_rect = {screen_x, screen_y, width, height};
     SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
     SDL_RenderCopyEx(renderer, sprite.texture.texture, nullptr, &dst_rect, 0, nullptr, flip);
 }
 
-void GraphicsSystem::render_sprite_centered(int screen_x, int screen_y, const Sprite& sprite, bool flip_h) {
+void GraphicsSystem::render_sprite_centered(int screen_x, int screen_y, const Sprite& sprite,
+                                            bool flip_h) {
     int x = screen_x - sprite.width / 2;
     int y = screen_y - sprite.height / 2;
     render_sprite(x, y, sprite, flip_h);
 }
 
-void GraphicsSystem::render_sprite_centered_scaled(int screen_x, int screen_y, const Sprite& sprite, int width, int height, bool flip_h) {
+void GraphicsSystem::render_sprite_centered_scaled(int screen_x, int screen_y, const Sprite& sprite,
+                                                   int width, int height, bool flip_h) {
     int x = screen_x - width / 2;
     int y = screen_y - height / 2;
     render_sprite_scaled(x, y, sprite, width, height, flip_h);
-
 }
-
 
 void GraphicsSystem::render_sprite_top_clip_scaled(int screen_x, int screen_y, const Sprite& sprite,
                                                    int width, int full_height, int clip_height,
@@ -667,25 +655,26 @@ void GraphicsSystem::render_sprite_top_clip_scaled(int screen_x, int screen_y, c
     SDL_RenderCopyEx(renderer, sprite.texture.texture, &src_rect, &dst_rect, 0, nullptr, flip);
 }
 
-void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& text, SDL_Color color) {
+void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& text,
+                                 SDL_Color color) {
     if (debug_font == nullptr) {
         return;  // Font not available
     }
-    
+
     SDL_Surface* surface = TTF_RenderText_Solid(debug_font, text.c_str(), color);
     if (surface == nullptr) {
         return;
     }
-    
+
     SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
     if (texture == nullptr) {
         SDL_FreeSurface(surface);
         return;
     }
-    
+
     SDL_Rect dst_rect = {screen_x, screen_y, surface->w, surface->h};
     SDL_RenderCopy(renderer, texture, nullptr, &dst_rect);
-    
+
     SDL_DestroyTexture(texture);
     SDL_FreeSurface(surface);
 }
@@ -693,23 +682,23 @@ void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& 
 void GraphicsSystem::render_debug_overlay() {
     // Draw a semi-transparent debug indicator in top-left corner
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-    
+
     // Background box
     SDL_Rect bg_rect = {5, 5, 200, 100};
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 180);  // Semi-transparent black
     SDL_RenderFillRect(renderer, &bg_rect);
-    
+
     // Border
     SDL_SetRenderDrawColor(renderer, 255, 255, 0, 255);  // Yellow border
     SDL_RenderDrawRect(renderer, &bg_rect);
-    
+
     // Draw noclip indicator if active
     if (cheat_noclip) {
         SDL_Rect noclip_indicator = {10, 10, 20, 20};
         SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);  // Green square for noclip
         SDL_RenderFillRect(renderer, &noclip_indicator);
     }
-    
+
     // Draw simple bars to visualize velocity
     // Y velocity bar (vertical)
     int vel_bar_height = std::abs(comic_y_vel) * 2;
@@ -717,26 +706,26 @@ void GraphicsSystem::render_debug_overlay() {
     SDL_Rect vel_bar = {40, 50 - vel_bar_height / 2, 10, vel_bar_height};
     SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);  // Red for velocity
     SDL_RenderFillRect(renderer, &vel_bar);
-    
+
     // X momentum bar (horizontal)
     int momentum_bar_width = std::abs(comic_x_momentum) * 3;
     if (momentum_bar_width > 50) momentum_bar_width = 50;
     SDL_Rect momentum_bar = {60, 40, momentum_bar_width, 10};
     SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);  // Blue for momentum
     SDL_RenderFillRect(renderer, &momentum_bar);
-    
+
     // Reset blend mode
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_NONE);
-    
+
     // Render coordinate information as text
     if (debug_font != nullptr) {
         std::ostringstream coord_text;
         coord_text << "X: " << static_cast<int>(comic_x) << " Y: " << static_cast<int>(comic_y);
         render_text(10, 70, coord_text.str(), {0, 255, 255, 255});  // Cyan text
-        
+
         std::ostringstream level_text;
-        level_text << "L" << static_cast<int>(current_level_number) 
-                   << " S" << static_cast<int>(current_stage_number);
+        level_text << "L" << static_cast<int>(current_level_number) << " S"
+                   << static_cast<int>(current_stage_number);
         render_text(10, 85, level_text.str(), {0, 255, 255, 255});  // Cyan text
     }
 }
@@ -767,7 +756,7 @@ void GraphicsSystem::cleanup() {
         pair.second.cleanup();
     }
     tilesets.clear();
-    
+
     // Clean up sprites
     for (auto& pair : sprites) {
         if (pair.second.texture.texture) {
@@ -775,7 +764,7 @@ void GraphicsSystem::cleanup() {
         }
     }
     sprites.clear();
-    
+
     // Clean up enemy sprites
     for (auto& pair : enemy_sprites) {
         if (pair.second) {
@@ -793,7 +782,7 @@ void GraphicsSystem::cleanup() {
         }
     }
     enemy_sprites.clear();
-    
+
     // Clean up fonts
     if (debug_font != nullptr) {
         TTF_CloseFont(debug_font);
@@ -803,7 +792,7 @@ void GraphicsSystem::cleanup() {
         TTF_Quit();
         ttf_inited = false;
     }
-    
+
     // Only quit SDL_image once to prevent double-quit errors
     if (img_inited) {
         IMG_Quit();

@@ -1,8 +1,10 @@
 #include "actors.h"
+
+#include <iostream>
+
+#include "audio.h"
 #include "level.h"
 #include "physics.h"
-#include "audio.h"
-#include <iostream>
 
 // Global door key flag defined in main.cpp (used by doors.cpp)
 extern uint8_t comic_has_door_key;
@@ -16,14 +18,14 @@ extern uint8_t score_10000_counter;
 
 /**
  * award_points - Award points to the player's score
- * 
+ *
  * Adds points to the player's score using base-100 arithmetic with carry propagation.
  * Score is stored as three base-100 bytes where:
  *   score_bytes[0] = ones/tens (0-99)
  *   score_bytes[1] = hundreds/thousands (0-99)
  *   score_bytes[2] = ten-thousands/hundred-thousands (0-99)
  * Total score = byte[0] + (byte[1] * 100) + (byte[2] * 10000), max 999,999
- * 
+ *
  * Input points are base-100 units.
  * Example: award_points(3) adds 300 displayed points.
  */
@@ -183,11 +185,8 @@ void ActorSystem::reset_for_stage() {
 /**
  * Setup enemies for a stage from level data
  */
-void ActorSystem::setup_enemies_for_stage(
-    const level_t* level,
-    int level_index,
-    int stage_number,
-    GraphicsSystem* graphics_system) {
+void ActorSystem::setup_enemies_for_stage(const level_t* level, int level_index, int stage_number,
+                                          GraphicsSystem* graphics_system) {
     if (!level || stage_number < 0 || stage_number >= 3) {
         return;
     }
@@ -223,7 +222,7 @@ void ActorSystem::setup_enemies_for_stage(
 
         // Validate sprite descriptor index to avoid out-of-bounds access
         if (record.shp_index >= 4) {
-            std::cerr << "Invalid sprite index " << static_cast<int>(record.shp_index) 
+            std::cerr << "Invalid sprite index " << static_cast<int>(record.shp_index)
                       << " for enemy slot " << i << " (max is 3)" << std::endl;
             enemy.state = ENEMY_STATE_DESPAWNED;
             enemy.spawn_timer_and_animation = 100;
@@ -256,7 +255,8 @@ void ActorSystem::setup_enemies_for_stage(
             continue;
         }
 
-        enemy.num_animation_frames = static_cast<uint8_t>(enemy.animation_data->frame_sequence.size());
+        enemy.num_animation_frames =
+            static_cast<uint8_t>(enemy.animation_data->frame_sequence.size());
         if (enemy.num_animation_frames == 0) {
             std::cerr << "Invalid animation sequence for enemy sprite" << std::endl;
             enemy.state = ENEMY_STATE_DESPAWNED;
@@ -277,7 +277,8 @@ void ActorSystem::setup_enemies_for_stage(
     reset_fireballs();
 }
 
-void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, int render_scale) const {
+void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x,
+                                 int render_scale) const {
     if (!graphics_system) {
         return;
     }
@@ -313,19 +314,24 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, 
         const TextureInfo* frame_info = nullptr;
         bool flip_h = false;
 
-        if (enemy.sprite_descriptor && enemy.sprite_descriptor->horizontal == ENEMY_HORIZONTAL_SEPARATE) {
+        if (enemy.sprite_descriptor &&
+            enemy.sprite_descriptor->horizontal == ENEMY_HORIZONTAL_SEPARATE) {
             const auto& right_frames = enemy.animation_data->frames_right;
             if (enemy.facing == ENEMY_FACING_RIGHT && !right_frames.empty()) {
                 frame_info = &right_frames[frame_index % right_frames.size()];
             } else {
-                frame_info = &enemy.animation_data->frames_left[frame_index % enemy.animation_data->frames_left.size()];
+                frame_info =
+                    &enemy.animation_data
+                         ->frames_left[frame_index % enemy.animation_data->frames_left.size()];
             }
         } else {
-            frame_info = &enemy.animation_data->frames_left[frame_index % enemy.animation_data->frames_left.size()];
+            frame_info = &enemy.animation_data
+                              ->frames_left[frame_index % enemy.animation_data->frames_left.size()];
             flip_h = (enemy.facing == ENEMY_FACING_RIGHT);
         }
 
-        const int enemy_screen_x = (static_cast<int>(enemy.x) - camera_x) * render_scale + render_scale;
+        const int enemy_screen_x =
+            (static_cast<int>(enemy.x) - camera_x) * render_scale + render_scale;
         const int enemy_screen_y = static_cast<int>(enemy.y) * render_scale + render_scale;
 
         auto render_enemy_base = [&]() {
@@ -341,14 +347,8 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, 
             sprite.width = frame_info->width;
             sprite.height = frame_info->height;
 
-            graphics_system->render_sprite_centered_scaled(
-                enemy_screen_x,
-                enemy_screen_y,
-                sprite,
-                render_width,
-                render_height,
-                flip_h
-            );
+            graphics_system->render_sprite_centered_scaled(enemy_screen_x, enemy_screen_y, sprite,
+                                                           render_width, render_height, flip_h);
         };
 
         if (enemy.state == ENEMY_STATE_SPAWNED) {
@@ -365,7 +365,6 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, 
 
         // Dying enemy states: white spark (2..7) or red spark (8..13).
         if (enemy.state >= ENEMY_STATE_WHITE_SPARK) {
-
             uint8_t normalized_state = enemy.state;
             if (enemy.state >= ENEMY_STATE_RED_SPARK) {
                 normalized_state = static_cast<uint8_t>(
@@ -378,7 +377,8 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, 
             }
 
             const uint8_t spark_set = (enemy.state >= ENEMY_STATE_RED_SPARK) ? 1 : 0;
-            const uint8_t spark_base = (spark_set == 0) ? ENEMY_STATE_WHITE_SPARK : ENEMY_STATE_RED_SPARK;
+            const uint8_t spark_base =
+                (spark_set == 0) ? ENEMY_STATE_WHITE_SPARK : ENEMY_STATE_RED_SPARK;
             const uint8_t spark_frame = static_cast<uint8_t>((enemy.state - spark_base) % 3);
 
             const Sprite* spark_sprite = spark_sprites[spark_set][spark_frame];
@@ -387,12 +387,7 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x, 
             }
 
             graphics_system->render_sprite_centered_scaled(
-                enemy_screen_x,
-                enemy_screen_y,
-                *spark_sprite,
-                render_scale * 2,
-                render_scale * 2
-            );
+                enemy_screen_x, enemy_screen_y, *spark_sprite, render_scale * 2, render_scale * 2);
         }
     }
 }
@@ -408,8 +403,8 @@ bool ActorSystem::load_effect_sprites(GraphicsSystem* graphics_system) {
         for (int frame = 0; frame < 3; ++frame) {
             const std::string dir = std::to_string(frame);
             if (!graphics_system->load_sprite(names[set], dir)) {
-                std::cerr << "Failed to load spark sprite " << names[set]
-                          << "_" << frame << std::endl;
+                std::cerr << "Failed to load spark sprite " << names[set] << "_" << frame
+                          << std::endl;
                 ok = false;
             }
             spark_sprites[set][frame] = graphics_system->get_sprite(names[set], dir);
@@ -425,12 +420,8 @@ bool ActorSystem::load_effect_sprites(GraphicsSystem* graphics_system) {
 /**
  * Main update function - called once per game tick
  */
-void ActorSystem::update(
-    uint8_t comic_x, uint8_t comic_y,
-    uint8_t comic_facing,
-    const uint8_t* tiles,
-    int camera_x,
-    uint8_t fire_key) {
+void ActorSystem::update(uint8_t comic_x, uint8_t comic_y, uint8_t comic_facing,
+                         const uint8_t* tiles, int camera_x, uint8_t fire_key) {
     // Store global state for use by behavior functions
     g_comic_x = comic_x;
     g_comic_y = comic_y;
@@ -754,9 +745,7 @@ void ActorSystem::check_enemy_player_collision(enemy_t* enemy) {
 /**
  * Check if a tile is solid
  */
-bool ActorSystem::is_tile_solid(uint8_t tile_id) const {
-    return tile_id > tileset_last_passable;
-}
+bool ActorSystem::is_tile_solid(uint8_t tile_id) const { return tile_id > tileset_last_passable; }
 
 /**
  * Get tile at coordinates
@@ -934,7 +923,8 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
     if (enemy->y_vel < 0) {
         // === .moving_up ===
         // Assembly: sar y_vel 3x (arithmetic) → y_vel/8, still negative (e.g. -7>>3 = -1)
-        //           neg → positive upward delta; sub al, delta → proposed_y += delta (negative = up)
+        //           neg → positive upward delta; sub al, delta → proposed_y += delta (negative =
+        //           up)
         // Simplified: proposed_y += (int8_t)(y_vel >> ENEMY_VELOCITY_SHIFT)
         // For y_vel=-7: delta=-1, proposed_y decreases by 1 (moves up 1 unit)
         int8_t delta = static_cast<int8_t>(enemy->y_vel >> ENEMY_VELOCITY_SHIFT);
@@ -971,7 +961,7 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
         if (check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(new_y + 1))) {
             proposed_y = enemy->y;  // collision: restore original (.undo_position_change)
         } else {
-            proposed_y = new_y;     // no collision: accept downward movement
+            proposed_y = new_y;  // no collision: accept downward movement
         }
         // fall through to .apply_gravity
 
@@ -998,7 +988,8 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
     // Assembly: dl += 2; clamp to TERMINAL_VELOCITY; store y_vel
     {
         int16_t new_vel = static_cast<int16_t>(enemy->y_vel) + ENEMY_GRAVITY;  // +2
-        enemy->y_vel = static_cast<int8_t>(new_vel > TERMINAL_VELOCITY ? TERMINAL_VELOCITY : new_vel);
+        enemy->y_vel =
+            static_cast<int8_t>(new_vel > TERMINAL_VELOCITY ? TERMINAL_VELOCITY : new_vel);
     }
 
     // === Restraint — only gates horizontal movement; gravity and ground-check always run ===
@@ -1038,7 +1029,8 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
                     enemy->x_vel = 1;  // wall → bounce right
                 } else {
                     enemy->x = next_x;
-                    camera_rel_x = static_cast<int16_t>(enemy->x) - static_cast<int16_t>(g_camera_x);
+                    camera_rel_x =
+                        static_cast<int16_t>(enemy->x) - static_cast<int16_t>(g_camera_x);
                     if (camera_rel_x <= 0) {
                         enemy->x_vel = 1;  // left playfield edge
                     }
@@ -1162,7 +1154,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
         if (enemy->x < g_comic_x) {
             // Move right
             next_x = static_cast<uint8_t>(enemy->x + 1);
-            collision = check_horizontal_enemy_map_collision(static_cast<uint8_t>(next_x + 1), enemy->y);
+            collision =
+                check_horizontal_enemy_map_collision(static_cast<uint8_t>(next_x + 1), enemy->y);
 
             if (!collision) {
                 enemy->x = next_x;
@@ -1196,7 +1189,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
         if (enemy->y < g_comic_y) {
             // Move down
             next_y = static_cast<uint8_t>(enemy->y + 1);
-            collision = check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(next_y + 1));
+            collision =
+                check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(next_y + 1));
 
             if (!collision) {
                 enemy->y = next_y;
@@ -1363,7 +1357,8 @@ bool ActorSystem::load_fireball_sprites(GraphicsSystem* graphics_system) {
     for (uint8_t i = 0; i < FIREBALL_NUM_FRAMES; i++) {
         std::string dir = std::to_string(i);
         if (!graphics_system->load_sprite("fireball", dir)) {
-            std::cerr << "Failed to load fireball sprite frame " << static_cast<int>(i) << std::endl;
+            std::cerr << "Failed to load fireball sprite frame " << static_cast<int>(i)
+                      << std::endl;
             ok = false;
         } else {
             fireball_sprite[i] = graphics_system->get_sprite("fireball", dir);
@@ -1390,12 +1385,13 @@ void ActorSystem::try_to_fire() {
             // Spawn fireball at Comic's chest height
             fb.y = static_cast<uint8_t>(g_comic_y + 1);
             fb.x = g_comic_x;
-            fb.vel = (g_comic_facing == COMIC_FACING_RIGHT) ? FIREBALL_VELOCITY : -FIREBALL_VELOCITY;
+            fb.vel =
+                (g_comic_facing == COMIC_FACING_RIGHT) ? FIREBALL_VELOCITY : -FIREBALL_VELOCITY;
             fb.corkscrew_phase = 2;
             fb.animation = 0;
             fb.num_animation_frames = FIREBALL_NUM_FRAMES;
             play_game_sound(GameSound::FIRE);
-            return; // Only one fireball per fire-input tick
+            return;  // Only one fireball per fire-input tick
         }
     }
 }
@@ -1494,7 +1490,7 @@ void ActorSystem::handle_fireballs() {
             fb.y = FIREBALL_DEAD;
             award_points(3);  // Award 300 points for killing an enemy with a fireball
             play_game_sound(GameSound::ENEMY_HIT);
-            break; // Fireball consumed; check next fireball
+            break;  // Fireball consumed; check next fireball
         }
     }
 }
@@ -1503,14 +1499,15 @@ void ActorSystem::handle_fireballs() {
  * Render all active fireballs.
  * Fireball sprites are 16x8 px originals; rendered at 2× scale → 32x16 screen pixels.
  */
-void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int camera_x, int render_scale) const {
+void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int camera_x,
+                                   int render_scale) const {
     if (!graphics_system || comic_firepower == 0) {
         return;
     }
 
     // Scale factor: original sprites are 8 px per game unit; we use render_scale px per unit.
     // Sprites are 16x8 = 2 game units wide × 1 game unit tall at original resolution.
-    const int scale = render_scale / 8; // 16/8 = 2
+    const int scale = render_scale / 8;  // 16/8 = 2
     const int sprite_w = 16 * scale;
     const int sprite_h = 8 * scale;
 
@@ -1534,7 +1531,8 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int camera_x
         int screen_x = rel_x * render_scale + render_scale;
         int screen_y = static_cast<int>(fb.y) * render_scale + render_scale;
 
-        graphics_system->render_sprite_centered_scaled(screen_x, screen_y, *sprite, sprite_w, sprite_h);
+        graphics_system->render_sprite_centered_scaled(screen_x, screen_y, *sprite, sprite_w,
+                                                       sprite_h);
     }
 }
 /* ============================================================================
@@ -1551,7 +1549,7 @@ int ActorSystem::get_jump_power() const {
 /**
  * Load item sprites from assets.
  * Item sprites are 16×16 pixels, and each item has two frames (even/odd) for animation.
- * 
+ *
  * Expected file naming: sprite-<name>_<frame>.png
  * Example: sprite-corkscrew_even.png, sprite-corkscrew_odd.png
  */
@@ -1563,21 +1561,21 @@ bool ActorSystem::load_item_sprites(GraphicsSystem* graphics_system) {
 
     // Item sprite names mapping (item_type → base filename)
     const char* item_names[15] = {
-        "corkscrew",    // 0
-        "doorkey",      // 1
-        "boots",        // 2
-        "lantern",      // 3
-        "teleportwand", // 4
-        "gems",         // 5
-        "crown",        // 6
-        "gold",         // 7
-        "cola",         // 8
+        "corkscrew",     // 0
+        "doorkey",       // 1
+        "boots",         // 2
+        "lantern",       // 3
+        "teleportwand",  // 4
+        "gems",          // 5
+        "crown",         // 6
+        "gold",          // 7
+        "cola",          // 8
         nullptr,         // 9 (unused)
         nullptr,         // 10 (unused)
         nullptr,         // 11 (unused)
         nullptr,         // 12 (unused)
         nullptr,         // 13 (unused)
-        "shield"        // 14
+        "shield"         // 14
     };
 
     const char* frame_names[2] = {"even", "odd"};
@@ -1586,7 +1584,7 @@ bool ActorSystem::load_item_sprites(GraphicsSystem* graphics_system) {
 
     for (int item_type = 0; item_type < 15; item_type++) {
         if (item_names[item_type] == nullptr) {
-            continue; // Skip unused slots
+            continue;  // Skip unused slots
         }
 
         for (int frame = 0; frame < 2; frame++) {
@@ -1594,8 +1592,8 @@ bool ActorSystem::load_item_sprites(GraphicsSystem* graphics_system) {
             std::string frame_name = frame_names[frame];
 
             if (!graphics_system->load_sprite(sprite_name, frame_name)) {
-                std::cerr << "Warning: Failed to load item sprite: "
-                          << sprite_name << "_" << frame_name << std::endl;
+                std::cerr << "Warning: Failed to load item sprite: " << sprite_name << "_"
+                          << frame_name << std::endl;
                 all_loaded = false;
                 continue;
             }
@@ -1603,8 +1601,8 @@ bool ActorSystem::load_item_sprites(GraphicsSystem* graphics_system) {
             // Get loaded sprite
             item_sprites[item_type][frame] = graphics_system->get_sprite(sprite_name, frame_name);
             if (!item_sprites[item_type][frame]) {
-                std::cerr << "Warning: Failed to retrieve item sprite: "
-                          << sprite_name << "_" << frame_name << std::endl;
+                std::cerr << "Warning: Failed to retrieve item sprite: " << sprite_name << "_"
+                          << frame_name << std::endl;
                 all_loaded = false;
             }
         }
@@ -1625,24 +1623,26 @@ void ActorSystem::handle_item() {
 
     // Check if already collected
     if (current_level_index >= 8 || current_stage_index >= 3) {
-        return; // Out of bounds
+        return;  // Out of bounds
     }
     if (items_collected[current_level_index][current_stage_index] != 0) {
-        return; // Already collected
+        return;  // Already collected
     }
 
     // Check if item is visible in playfield (camera bounds check)
     int rel_x = static_cast<int>(current_item_x) - g_camera_x;
     if (rel_x < 0 || rel_x > PLAYFIELD_WIDTH) {
-        return; // Off-screen, don't check collision (but don't render either)
+        return;  // Off-screen, don't check collision (but don't render either)
     }
 
     // Check collision with Comic
     // Horizontal: abs(item.x - comic_x) <= 1
-    int16_t x_diff = static_cast<int16_t>(static_cast<int>(current_item_x) - static_cast<int>(g_comic_x));
+    int16_t x_diff =
+        static_cast<int16_t>(static_cast<int>(current_item_x) - static_cast<int>(g_comic_x));
     if (x_diff >= -1 && x_diff <= 1) {
         // Vertical: 0 <= (item.y - comic_y) < 4
-        int16_t y_diff = static_cast<int16_t>(static_cast<int>(current_item_y) - static_cast<int>(g_comic_y));
+        int16_t y_diff =
+            static_cast<int16_t>(static_cast<int>(current_item_y) - static_cast<int>(g_comic_y));
         if (y_diff >= 0 && y_diff < 4) {
             // Collision detected!
             collect_item();
@@ -1743,7 +1743,8 @@ void ActorSystem::apply_item_effect(uint8_t item_type) {
  * Render the current stage's item if not yet collected.
  * Item sprites are 16×16 pixels (2 game units × 2 game units).
  */
-void ActorSystem::render_item(GraphicsSystem* graphics_system, int camera_x, int render_scale) const {
+void ActorSystem::render_item(GraphicsSystem* graphics_system, int camera_x,
+                              int render_scale) const {
     if (!graphics_system) {
         return;
     }
@@ -1755,31 +1756,31 @@ void ActorSystem::render_item(GraphicsSystem* graphics_system, int camera_x, int
 
     // Check if already collected
     if (current_level_index >= 8 || current_stage_index >= 3) {
-        return; // Out of bounds
+        return;  // Out of bounds
     }
     if (items_collected[current_level_index][current_stage_index] != 0) {
-        return; // Already collected, don't render
+        return;  // Already collected, don't render
     }
 
     // Check if item is visible in playfield
     int rel_x = static_cast<int>(current_item_x) - camera_x;
     if (rel_x < 0 || rel_x > PLAYFIELD_WIDTH) {
-        return; // Off-screen
+        return;  // Off-screen
     }
 
     // Get sprite based on animation counter
     if (current_item_type >= 15) {
-        return; // Invalid item type
+        return;  // Invalid item type
     }
 
     const Sprite* sprite = item_sprites[current_item_type][item_animation_counter];
     if (!sprite || !sprite->texture.texture) {
-        return; // Sprite not loaded
+        return;  // Sprite not loaded
     }
 
     // Item sprites are 16×16 pixels = 2×2 game units
     // Scale to render_scale per game unit
-    const int scale = render_scale / 8; // 16/8 = 2
+    const int scale = render_scale / 8;  // 16/8 = 2
     const int sprite_w = 16 * scale;
     const int sprite_h = 16 * scale;
 

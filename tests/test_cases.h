@@ -90,4 +90,4 @@ void test_award_points_awards_extra_life_every_50000();
 void test_award_points_awards_extra_life_after_500_internal_units();
 void test_high_score_bytes_conversion();
 
-#endif // TEST_CASES_H
+#endif  // TEST_CASES_H

@@ -5,7 +5,7 @@
 
 /**
  * level_tiles.h - Declarations for auto-generated tile data
- * 
+ *
  * This file declares the extern tile arrays that are defined in the auto-generated
  * level_tiles.cpp file. Tile data is stored as hex byte arrays (128×10 tiles per stage).
  */
