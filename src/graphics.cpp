@@ -319,8 +319,8 @@ bool GraphicsSystem::load_tileset(const std::string& level_name) {
 
     if (missing_count > 0) {
         std::cerr << "Warning: Tileset '" << level_name << "' missing " << missing_count
-                  << " tile(s)"
-                  << " (loaded " << loaded_count << ")" << (first_missing.empty() ? "" : ", e.g. ")
+                  << " tile(s) (loaded " << loaded_count << ")"
+                  << (first_missing.empty() ? "" : ", e.g. ")
                   << (first_missing.empty() ? "" : first_missing) << std::endl;
     }
 
