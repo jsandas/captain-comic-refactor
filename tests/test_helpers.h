@@ -1,21 +1,22 @@
 #ifndef TEST_HELPERS_H
 #define TEST_HELPERS_H
 
-#include <string>
-#include <vector>
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
-#include <algorithm>
-#include "../include/physics.h"
+#include <string>
+#include <vector>
+
+#include "../include/actors.h"
+#include "../include/audio.h"
+#include "../include/doors.h"
 #include "../include/graphics.h"
 #include "../include/level.h"
 #include "../include/level_loader.h"
-#include "../include/doors.h"
-#include "../include/actors.h"
-#include "../include/audio.h"
+#include "../include/physics.h"
+#include "../include/player_teleport.h"
 #include "../include/title_sequence.h"
 #include "../include/ui_system.h"
-#include "../include/player_teleport.h"
 
 // Test case structure
 struct TestCase {
@@ -72,7 +73,8 @@ void check(bool condition, const std::string& message);
 Animation make_animation(const std::vector<int>& durations, bool looping);
 void reset_physics_state();
 void reset_door_state();
-level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level, uint8_t target_stage);
+level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level,
+                                     uint8_t target_stage);
 void simulate_tick();
 int measure_jump_height(uint8_t jump_power);
 void advance_death_sequence_until_complete(int max_ticks = 128);
@@ -83,4 +85,4 @@ void quit_sdl_audio();
 void wait_for_sfx_channel_idle(uint32_t timeout_ms = 1000);
 #endif
 
-#endif // TEST_HELPERS_H
+#endif  // TEST_HELPERS_H

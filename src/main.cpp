@@ -1,26 +1,28 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+
 #include <algorithm>
-#include <iostream>
-#include <cstring>
 #include <array>
-#include "../include/physics.h"
-#include "../include/graphics.h"
-#include "../include/level_loader.h"
-#include "../include/doors.h"
-#include "../include/cheats.h"
+#include <cstring>
+#include <iostream>
+
 #include "../include/actors.h"
 #include "../include/audio.h"
+#include "../include/cheats.h"
+#include "../include/doors.h"
+#include "../include/graphics.h"
+#include "../include/level_loader.h"
+#include "../include/physics.h"
+#include "../include/player_teleport.h"
 #include "../include/title_sequence.h"
 #include "../include/ui_system.h"
-#include "../include/player_teleport.h"
 
 // Game state
 int comic_x = 20;
 int comic_y = 2;
 int8_t comic_y_vel = 0;
 int8_t comic_x_momentum = 0;
-uint8_t comic_facing = 1; // 1 right, 0 left
+uint8_t comic_facing = 1;  // 1 right, 0 left
 uint8_t comic_animation = 0;
 uint8_t comic_is_falling_or_jumping = 1;
 uint8_t comic_jump_counter = 0;
@@ -29,10 +31,10 @@ uint8_t key_state_jump = 0;
 uint8_t previous_key_state_jump = 0;
 uint8_t key_state_left = 0;
 uint8_t key_state_right = 0;
-uint8_t key_state_open = 0;  // Open key for doors
-uint8_t previous_key_state_open = 0;  // Track previous state for edge-triggered activation
-uint8_t key_state_fire = 0;  // Fire key (Left Ctrl)
-uint8_t key_state_teleport = 0;  // Teleport key (CapsLock-style binding)
+uint8_t key_state_open = 0;               // Open key for doors
+uint8_t previous_key_state_open = 0;      // Track previous state for edge-triggered activation
+uint8_t key_state_fire = 0;               // Fire key (Left Ctrl)
+uint8_t key_state_teleport = 0;           // Teleport key (CapsLock-style binding)
 uint8_t previous_key_state_teleport = 0;  // Track previous teleport key state for edge trigger
 int camera_x = 0;
 
@@ -41,16 +43,16 @@ uint8_t comic_has_door_key = 0;  // 1 if player has door key, 0 otherwise
 uint8_t comic_num_lives = 0;  // Number of lives remaining (counts up from 0 to 5, then subtracts 1)
 uint8_t lives_sequence_counter = 5;  // Lives count-up sequence: award 5 lives, then subtract 1
 uint8_t lives_sequence_delay = 1;  // Delay counter for lives animation (1 tick between each award)
-bool lives_sequence_complete = false;  // Flag to stop lives sequence after completion
-uint8_t comic_hp = 0;  // Current health points (0-6)
+bool lives_sequence_complete = false;        // Flag to stop lives sequence after completion
+uint8_t comic_hp = 0;                        // Current health points (0-6)
 uint8_t comic_hp_pending_increase = MAX_HP;  // HP fills gradually from 0 to MAX_HP at game start
-uint8_t score_bytes[3] = {0, 0, 0};  // Score in base-100 encoding
+uint8_t score_bytes[3] = {0, 0, 0};          // Score in base-100 encoding
 uint8_t score_10000_counter = 0;  // Count carries into ten-thousands digit; 5 -> extra life
 // Note: Firepower, items, and treasures are managed by ActorSystem (authoritative state)
 
 // Level/stage transition tracking
-uint8_t current_level_number = 1;  // Current level (0=LAKE, 1=FOREST, etc.)
-uint8_t current_stage_number = 0;  // Current stage (0-2 per level)
+uint8_t current_level_number = 1;            // Current level (0=LAKE, 1=FOREST, etc.)
+uint8_t current_stage_number = 0;            // Current stage (0-2 per level)
 const level_t* current_level_ptr = nullptr;  // Pointer to current level data
 int8_t source_door_level_number = -1;  // Set when entering via door for reciprocal positioning
 int8_t source_door_stage_number = -1;
@@ -60,15 +62,10 @@ uint8_t comic_y_checkpoint = 12;  // Y position to respawn at
 uint8_t comic_x_checkpoint = 14;  // X position to respawn at
 
 // Game state
-bool game_over_triggered = false;  // Set when life depletion should transition to game-over sequence
+bool game_over_triggered =
+    false;  // Set when life depletion should transition to game-over sequence
 
-enum class GameState {
-    Playing,
-    Paused,
-    Victory,
-    GameOver,
-    Exiting
-};
+enum class GameState { Playing, Paused, Victory, GameOver, Exiting };
 
 // Teleport state
 bool comic_is_teleporting = false;
@@ -85,9 +82,8 @@ bool teleport_skip_tick = false;
 ActorSystem* g_actor_system = nullptr;  // Actor system pointer (for cheat access)
 
 // Level names (indexed by level number)
-static constexpr const char* level_names[] = {
-    "lake", "forest", "space", "base", "cave", "shed", "castle", "comp"
-};
+static constexpr const char* level_names[] = {"lake", "forest", "space",  "base",
+                                              "cave", "shed",   "castle", "comp"};
 
 // Player animation state
 Animation comic_idle_right;
@@ -107,11 +103,10 @@ void process_door_input() {
     // Edge-triggered door activation: only trigger on rising edge of open key
     // This prevents the door from immediately re-triggering when entering a new stage
     // (since load_new_stage positions Comic at the reciprocal door location)
-    if (comic_is_falling_or_jumping == 0 &&
-        key_state_open && !previous_key_state_open) {
+    if (comic_is_falling_or_jumping == 0 && key_state_open && !previous_key_state_open) {
         check_door_activation();
     }
-    
+
     previous_key_state_open = key_state_open;
 }
 
@@ -145,8 +140,7 @@ void begin_teleport() {
             const int dest_camera_rel = camera_rel_x - TELEPORT_DISTANCE;
             if (dest_camera_rel < (PLAYFIELD_WIDTH / 2 - 2)) {
                 const int camera_movement = (PLAYFIELD_WIDTH / 2 - 2) - dest_camera_rel;
-                teleport_camera_counter = static_cast<uint8_t>(
-                    std::min(camera_x, camera_movement));
+                teleport_camera_counter = static_cast<uint8_t>(std::min(camera_x, camera_movement));
             }
         }
     } else {
@@ -245,12 +239,8 @@ void handle_teleport_tick() {
 
     teleport_animation++;
 
-    apply_teleport_destination_if_ready(
-        teleport_animation,
-        teleport_destination_x,
-        teleport_destination_y,
-        comic_x,
-        comic_y);
+    apply_teleport_destination_if_ready(teleport_animation, teleport_destination_x,
+                                        teleport_destination_y, comic_x, comic_y);
 
     if (teleport_animation >= 6) {
         comic_is_teleporting = false;
@@ -296,7 +286,7 @@ int main(int argc, char* argv[]) {
             return 0;
         }
     }
-    
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
         return 1;
@@ -333,7 +323,8 @@ int main(int argc, char* argv[]) {
         return code;
     };
 
-    window = SDL_CreateWindow("Captain Comic", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Captain Comic", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                              640, 480, SDL_WINDOW_SHOWN);
     if (window == nullptr) {
         std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         return cleanup_and_exit(1);
@@ -353,7 +344,8 @@ int main(int argc, char* argv[]) {
     }
 
     if (!initialize_audio_system()) {
-        std::cerr << "Warning: Audio system initialization failed. Continuing without sound." << std::endl;
+        std::cerr << "Warning: Audio system initialization failed. Continuing without sound."
+                  << std::endl;
     }
 
     // Load persisted key bindings if KEYS.DEF is present.
@@ -381,7 +373,7 @@ int main(int argc, char* argv[]) {
     if (debug_mode) {
         actor_system.comic_firepower = 3;  // Start with 3 fireball slots in debug mode for testing
     }
-    
+
     // Make actor system accessible to cheat system
     g_actor_system = &actor_system;
 
@@ -392,9 +384,8 @@ int main(int argc, char* argv[]) {
                   << std::endl;
     }
     // Pre-load player sprites and create animations
-    const char* sprite_names[] = {
-        "comic_standing", "comic_running_1", "comic_running_2", "comic_running_3", "comic_jumping"
-    };
+    const char* sprite_names[] = {"comic_standing", "comic_running_1", "comic_running_2",
+                                  "comic_running_3", "comic_jumping"};
     const char* directions[] = {"right", "left"};
 
     for (const char* sprite : sprite_names) {
@@ -419,7 +410,8 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < materialize_sprites.size(); ++i) {
         std::string materialize_name = "materialize_" + std::to_string(i);
         if (!g_graphics->load_sprite(materialize_name, "")) {
-            std::cerr << "Warning: Could not load beam-in sprite: " << materialize_name << std::endl;
+            std::cerr << "Warning: Could not load beam-in sprite: " << materialize_name
+                      << std::endl;
             materialize_sprites_loaded = false;
         }
         materialize_sprites[i] = g_graphics->get_sprite(materialize_name, "");
@@ -428,23 +420,18 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if (!g_graphics->load_sprite("teleport_0", "") ||
-        !g_graphics->load_sprite("teleport_1", "") ||
+    if (!g_graphics->load_sprite("teleport_0", "") || !g_graphics->load_sprite("teleport_1", "") ||
         !g_graphics->load_sprite("teleport_2", "")) {
         std::cerr << "Warning: Could not load one or more teleport sprites." << std::endl;
     }
 
     std::array<Sprite*, 5> teleport_sprites = {
-        g_graphics->get_sprite("teleport_0", ""),
-        g_graphics->get_sprite("teleport_1", ""),
-        g_graphics->get_sprite("teleport_2", ""),
-        g_graphics->get_sprite("teleport_1", ""),
-        g_graphics->get_sprite("teleport_0", "")
-    };
+        g_graphics->get_sprite("teleport_0", ""), g_graphics->get_sprite("teleport_1", ""),
+        g_graphics->get_sprite("teleport_2", ""), g_graphics->get_sprite("teleport_1", ""),
+        g_graphics->get_sprite("teleport_0", "")};
 
     if (!g_graphics->load_sprite("pause", "")) {
-        std::cerr << "Warning: Could not load pause sprite (sprite-pause.png)."
-                  << std::endl;
+        std::cerr << "Warning: Could not load pause sprite (sprite-pause.png)." << std::endl;
     }
     Sprite* pause_sprite = g_graphics->get_sprite("pause", "");
 
@@ -456,7 +443,8 @@ int main(int argc, char* argv[]) {
 
     // Load fireball sprites
     if (!actor_system.load_fireball_sprites(g_graphics)) {
-        std::cerr << "Warning: Could not load fireball sprites. Fireballs will not render." << std::endl;
+        std::cerr << "Warning: Could not load fireball sprites. Fireballs will not render."
+                  << std::endl;
     }
 
     if (!actor_system.load_effect_sprites(g_graphics)) {
@@ -473,14 +461,9 @@ int main(int argc, char* argv[]) {
     comic_jump_right = g_graphics->create_animation({"comic_jumping"}, "right", 100, true);
     comic_jump_left = g_graphics->create_animation({"comic_jumping"}, "left", 100, true);
     comic_death = g_graphics->create_animation(
-        {
-            "comic_death_0", "comic_death_1", "comic_death_2", "comic_death_3",
-            "comic_death_4", "comic_death_5", "comic_death_6", "comic_death_7"
-        },
-        "",
-        110,
-        false
-    );
+        {"comic_death_0", "comic_death_1", "comic_death_2", "comic_death_3", "comic_death_4",
+         "comic_death_5", "comic_death_6", "comic_death_7"},
+        "", 110, false);
 
     current_animation = &comic_idle_right;
 
@@ -499,15 +482,15 @@ int main(int argc, char* argv[]) {
     current_level_number = LEVEL_NUMBER_FOREST;  // Forest is the first playable level
     current_stage_number = 0;
     source_door_level_number = -1;  // Not entering via door
-    
+
     // Set initial spawn position
     comic_x = 14;
     comic_y = 12;
     comic_y_vel = 0;
-    
+
     // Load the level and stage
     load_new_level();
-    
+
     if (!current_level_ptr) {
         std::cerr << "Failed to load game level. Falling back to test level." << std::endl;
         init_test_level();  // Fall back to test level if loading fails
@@ -522,9 +505,10 @@ int main(int argc, char* argv[]) {
     }
 
     if (current_level_ptr) {
-        actor_system.setup_enemies_for_stage(current_level_ptr, current_level_number, current_stage_number, g_graphics);
+        actor_system.setup_enemies_for_stage(current_level_ptr, current_level_number,
+                                             current_stage_number, g_graphics);
     }
-    
+
     // Load item sprites
     if (!actor_system.load_item_sprites(g_graphics)) {
         std::cerr << "Warning: Some item sprites failed to load" << std::endl;
@@ -536,8 +520,8 @@ int main(int argc, char* argv[]) {
     // so the actual game logic runs at half the interrupt rate: ~9.1032 Hz.
     // Based on analysis of the original DOS timer interrupt handler
     // (original disassembly is not vendored in this repository).
-    constexpr double TICK_RATE = 18.2065 / 2.0; // ~9.1032 Hz - actual game tick rate
-    constexpr double MS_PER_TICK = 1000.0 / TICK_RATE; // ~109.86 ms per tick
+    constexpr double TICK_RATE = 18.2065 / 2.0;         // ~9.1032 Hz - actual game tick rate
+    constexpr double MS_PER_TICK = 1000.0 / TICK_RATE;  // ~109.86 ms per tick
     constexpr int MAX_TICKS_PER_FRAME = 5;
     constexpr double MAX_ACCUMULATED_MS = MS_PER_TICK * MAX_TICKS_PER_FRAME;
     uint32_t last_tick_time = SDL_GetTicks();
@@ -561,7 +545,8 @@ int main(int argc, char* argv[]) {
         return true;
     };
 
-    auto render_beam_in_frame = [&](bool show_comic, Sprite* materialize_sprite, bool present_frame = true) {
+    auto render_beam_in_frame = [&](bool show_comic, Sprite* materialize_sprite,
+                                    bool present_frame = true) {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
 
@@ -573,9 +558,8 @@ int main(int argc, char* argv[]) {
         }
 
         const float letterbox_scale = static_cast<float>(gameplay_frame_rect.w) / EGA_WIDTH;
-        const int render_scale = (letterbox_scale < 0.125f)
-            ? 1
-            : static_cast<int>(8.0f * letterbox_scale + 0.5f);
+        const int render_scale =
+            (letterbox_scale < 0.125f) ? 1 : static_cast<int>(8.0f * letterbox_scale + 0.5f);
 
         SDL_Rect playfield_viewport;
         playfield_viewport.x = gameplay_frame_rect.x + static_cast<int>(8 * letterbox_scale);
@@ -610,41 +594,24 @@ int main(int argc, char* argv[]) {
         if (show_comic) {
             AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
             if (frame) {
-                g_graphics->render_sprite_centered_scaled(
-                    comic_screen_x,
-                    comic_screen_y,
-                    frame->sprite,
-                    comic_width,
-                    comic_height);
+                g_graphics->render_sprite_centered_scaled(comic_screen_x, comic_screen_y,
+                                                          frame->sprite, comic_width, comic_height);
             }
         }
 
         if (materialize_sprite) {
             g_graphics->render_sprite_centered_scaled(
-                comic_screen_x,
-                comic_screen_y,
-                *materialize_sprite,
-                comic_width,
-                comic_height);
+                comic_screen_x, comic_screen_y, *materialize_sprite, comic_width, comic_height);
         }
 
         SDL_RenderSetViewport(renderer, &gameplay_frame_rect);
         SDL_RenderSetScale(renderer, letterbox_scale, letterbox_scale);
-        ui_system.render_hud(
-            score_bytes,
-            comic_num_lives,
-            comic_hp,
-            actor_system.fireball_meter,
-            actor_system.comic_firepower,
-            actor_system.comic_has_corkscrew != 0,
-            comic_has_door_key != 0,
-            actor_system.comic_has_teleport_wand != 0,
-            actor_system.comic_has_lantern != 0,
-            actor_system.comic_has_gems != 0,
-            actor_system.comic_has_crown != 0,
-            actor_system.comic_has_gold != 0,
-            comic_jump_power
-        );
+        ui_system.render_hud(score_bytes, comic_num_lives, comic_hp, actor_system.fireball_meter,
+                             actor_system.comic_firepower, actor_system.comic_has_corkscrew != 0,
+                             comic_has_door_key != 0, actor_system.comic_has_teleport_wand != 0,
+                             actor_system.comic_has_lantern != 0, actor_system.comic_has_gems != 0,
+                             actor_system.comic_has_crown != 0, actor_system.comic_has_gold != 0,
+                             comic_jump_power);
         SDL_RenderSetScale(renderer, 1.0f, 1.0f);
         SDL_RenderSetViewport(renderer, nullptr);
 
@@ -696,16 +663,16 @@ int main(int argc, char* argv[]) {
         const std::string path = g_graphics->get_asset_path(filename);
         SDL_Surface* surface = IMG_Load(path.c_str());
         if (!surface) {
-            std::cerr << "Victory sequence: failed to load " << filename
-                      << " (" << IMG_GetError() << ")" << std::endl;
+            std::cerr << "Victory sequence: failed to load " << filename << " (" << IMG_GetError()
+                      << ")" << std::endl;
             return nullptr;
         }
 
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
         SDL_FreeSurface(surface);
         if (!texture) {
-            std::cerr << "Victory sequence: failed to create texture for " << filename
-                      << " (" << SDL_GetError() << ")" << std::endl;
+            std::cerr << "Victory sequence: failed to create texture for " << filename << " ("
+                      << SDL_GetError() << ")" << std::endl;
             return nullptr;
         }
         return texture;
@@ -792,10 +759,10 @@ int main(int argc, char* argv[]) {
                     gameplay_frame_rect.x + static_cast<int>(game_over_x_ega * letterbox_scale),
                     gameplay_frame_rect.y + static_cast<int>(game_over_y_ega * letterbox_scale),
                     static_cast<int>(game_over_width_ega * letterbox_scale),
-                    static_cast<int>(game_over_height_ega * letterbox_scale)
-                };
+                    static_cast<int>(game_over_height_ega * letterbox_scale)};
 
-                SDL_RenderCopy(renderer, game_over_sprite->texture.texture, nullptr, &game_over_rect);
+                SDL_RenderCopy(renderer, game_over_sprite->texture.texture, nullptr,
+                               &game_over_rect);
                 SDL_RenderPresent(renderer);
             }
 
@@ -833,8 +800,7 @@ int main(int argc, char* argv[]) {
                 gameplay_frame_rect.x + static_cast<int>(game_over_x_ega * letterbox_scale),
                 gameplay_frame_rect.y + static_cast<int>(game_over_y_ega * letterbox_scale),
                 static_cast<int>(game_over_width_ega * letterbox_scale),
-                static_cast<int>(game_over_height_ega * letterbox_scale)
-            };
+                static_cast<int>(game_over_height_ega * letterbox_scale)};
             SDL_RenderCopy(renderer, game_over_sprite->texture.texture, nullptr, &game_over_rect);
             SDL_RenderPresent(renderer);
             play_game_sound(GameSound::GAME_OVER);
@@ -950,7 +916,7 @@ int main(int argc, char* argv[]) {
                 if (key_matches_binding(key, bindings.teleport)) {
                     key_state_teleport = 1;
                 }
-                
+
                 // Process cheat keys (only active if --debug flag set)
                 g_cheats->process_input(e.key.keysym.sym);
             } else if (e.type == SDL_KEYUP) {
@@ -1033,10 +999,11 @@ int main(int argc, char* argv[]) {
                 if (comic_is_teleporting) {
                     handle_teleport_tick();
 
-                    const uint8_t* tiles = current_level_ptr
-                        ? current_level_ptr->stages[current_stage_number].tiles
-                        : nullptr;
-                    actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x, key_state_fire);
+                    const uint8_t* tiles =
+                        current_level_ptr ? current_level_ptr->stages[current_stage_number].tiles
+                                          : nullptr;
+                    actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x,
+                                        key_state_fire);
                     ui_system.update();
                     continue;
                 }
@@ -1051,7 +1018,8 @@ int main(int argc, char* argv[]) {
                 // Detect landing this tick: was airborne, now grounded
                 // Assembly: on landing, jmp game_loop.check_pause_input skips ALL
                 // left/right movement AND the floor walk-off check for that tick.
-                const bool just_landed = (was_falling_or_jumping != 0) && (comic_is_falling_or_jumping == 0);
+                const bool just_landed =
+                    (was_falling_or_jumping != 0) && (comic_is_falling_or_jumping == 0);
                 if (just_landed) {
                     player_airborne_from_walk_off = false;
                 }
@@ -1109,9 +1077,10 @@ int main(int argc, char* argv[]) {
                 }
 
                 const uint8_t* tiles = current_level_ptr
-                    ? current_level_ptr->stages[current_stage_number].tiles
-                    : nullptr;
-                actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x, key_state_fire);
+                                           ? current_level_ptr->stages[current_stage_number].tiles
+                                           : nullptr;
+                actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x,
+                                    key_state_fire);
                 ui_system.update();
 
                 // ========== PHASE 2: Door and Teleport Checks (After Physics/Actors) ==========
@@ -1142,7 +1111,7 @@ int main(int argc, char* argv[]) {
                         break;
                     }
                 }
-                
+
                 // Lives count-up sequence: award 5 lives with 1-tick delay between each,
                 // then subtract 1 (the life currently in use)
                 if (!lives_sequence_complete) {
@@ -1152,7 +1121,7 @@ int main(int argc, char* argv[]) {
                             // Award a life
                             comic_num_lives++;
                             lives_sequence_counter--;
-                            
+
                             if (lives_sequence_counter > 0) {
                                 // Still more lives to award (wait 1 tick)
                                 lives_sequence_delay = 1;
@@ -1173,7 +1142,7 @@ int main(int argc, char* argv[]) {
                         }
                     }
                 }
-                
+
                 // Gradually fill HP from 0 to MAX_HP at game startup
                 // Each tick, increment HP if pending increase is scheduled
                 if (comic_hp_pending_increase > 0) {
@@ -1182,10 +1151,10 @@ int main(int argc, char* argv[]) {
                         comic_hp++;
                     }
                 }
-                
+
                 // Fireball meter charging is handled by ActorSystem::update()
                 // (charges at 1 unit per 2 ticks when not firing)
-                
+
                 // Game-over is handled by physics when Comic hits the bottom of playfield
                 // (sound triggered there).  No additional check needed here.
             }
@@ -1219,8 +1188,8 @@ int main(int argc, char* argv[]) {
                 } else {
                     current_animation = nullptr;
                 }
-            } else if (comic_is_falling_or_jumping && !suppress_jump_animation_this_frame
-                       && !player_airborne_from_walk_off) {
+            } else if (comic_is_falling_or_jumping && !suppress_jump_animation_this_frame &&
+                       !player_airborne_from_walk_off) {
                 current_animation = comic_facing ? &comic_jump_right : &comic_jump_left;
             } else {
                 if (player_moved_last_tick) {
@@ -1237,8 +1206,8 @@ int main(int argc, char* argv[]) {
             }
 
             if (current_animation) {
-                const bool is_run_anim = (current_animation == &comic_run_right ||
-                                          current_animation == &comic_run_left);
+                const bool is_run_anim =
+                    (current_animation == &comic_run_right || current_animation == &comic_run_left);
                 if (is_run_anim) {
                     // Phase 5: run animation advances exactly once per game tick via
                     // comic_run_cycle_frame, not by wall-clock comparison.
@@ -1270,7 +1239,8 @@ int main(int argc, char* argv[]) {
         // Each game unit = 8 EGA pixels (192 EGA pixels / 24 game units),
         // so gameplay scales consistently with the HUD.
         // Round to nearest int and clamp to minimum 1 to prevent zero-sized rendering.
-        const int render_scale = (letterbox_scale < 0.125f) ? 1 : static_cast<int>(8.0f * letterbox_scale + 0.5f);
+        const int render_scale =
+            (letterbox_scale < 0.125f) ? 1 : static_cast<int>(8.0f * letterbox_scale + 0.5f);
 
         // Render gameplay only inside the HUD playfield window
         // (C code: top-left at 8,8 EGA pixels; size 192x160 EGA pixels).
@@ -1295,7 +1265,8 @@ int main(int argc, char* argv[]) {
         if (level_changed || stage_changed) {
             cached_stage_number = current_stage_number;
             if (current_level_ptr) {
-                actor_system.setup_enemies_for_stage(current_level_ptr, current_level_number, current_stage_number, g_graphics);
+                actor_system.setup_enemies_for_stage(current_level_ptr, current_level_number,
+                                                     current_stage_number, g_graphics);
             }
         }
 
@@ -1308,19 +1279,19 @@ int main(int argc, char* argv[]) {
         const int OFFSCREEN_MARGIN_UNITS = 2;
         const int min_visible_x = camera_x - OFFSCREEN_MARGIN_UNITS;
         const int max_visible_x = camera_x + PLAYFIELD_WIDTH + OFFSCREEN_MARGIN_UNITS;
-        
+
         for (int ty = 0; ty < MAP_HEIGHT_TILES; ty++) {
             for (int tx = 0; tx < MAP_WIDTH_TILES; tx++) {
-                int world_x = tx * 2; // Tile x in game units
-                
+                int world_x = tx * 2;  // Tile x in game units
+
                 // Render tiles within visible range (with left margin for scrolling).
                 // Each tile is 2 units wide, so render if tile overlaps the range.
                 if (world_x + 2 > min_visible_x && world_x < max_visible_x) {
                     uint8_t tile = get_tile_at(tx * 2, ty * 2);
-                    
+
                     int screen_x = (world_x - camera_x) * render_scale;
                     int screen_y = ty * 2 * render_scale;
-                    
+
                     g_graphics->render_tile(screen_x, screen_y, tileset, tile, render_scale);
                 }
             }
@@ -1331,13 +1302,9 @@ int main(int argc, char* argv[]) {
         DoorAnimationRenderMode door_render_mode = DoorAnimationRenderMode::NONE;
         bool door_overlay_in_front = false;
         bool door_player_visible = true;
-        const bool door_anim_active = get_door_animation_render_state(
-            &door_world_x,
-            &door_world_y,
-            &door_render_mode,
-            &door_overlay_in_front,
-            &door_player_visible
-        );
+        const bool door_anim_active =
+            get_door_animation_render_state(&door_world_x, &door_world_y, &door_render_mode,
+                                            &door_overlay_in_front, &door_player_visible);
 
         auto render_door_animation_overlay = [&](bool draw_front_layer) {
             if (!door_anim_active || door_render_mode == DoorAnimationRenderMode::NONE) {
@@ -1354,9 +1321,7 @@ int main(int argc, char* argv[]) {
             const int screen_y = static_cast<int>(door_world_y) * render_scale;
 
             const bool can_draw_tiles =
-                tileset != nullptr &&
-                current_level_ptr != nullptr &&
-                tile_w >= 2;
+                tileset != nullptr && current_level_ptr != nullptr && tile_w >= 2;
 
             Uint8 prev_r = 0;
             Uint8 prev_g = 0;
@@ -1379,14 +1344,16 @@ int main(int argc, char* argv[]) {
                         return;
                     }
 
-                    if (world_tile_x >= MAP_WIDTH_TILES * 2 || world_tile_y >= MAP_HEIGHT_TILES * 2) {
+                    if (world_tile_x >= MAP_WIDTH_TILES * 2 ||
+                        world_tile_y >= MAP_HEIGHT_TILES * 2) {
                         return;
                     }
 
                     const int tile_screen_x = (world_tile_x - camera_x) * render_scale;
                     const int tile_screen_y = world_tile_y * render_scale;
                     const uint8_t tile_id = get_tile_at(world_tile_x, world_tile_y);
-                    g_graphics->render_tile(tile_screen_x, tile_screen_y, tileset, tile_id, render_scale);
+                    g_graphics->render_tile(tile_screen_x, tile_screen_y, tileset, tile_id,
+                                            render_scale);
                 };
 
                 int shift = 0;
@@ -1402,16 +1369,22 @@ int main(int argc, char* argv[]) {
 
                 // Each door leaf is one full tile column (2 game units wide).
                 g_graphics->render_tile(left_col_x, screen_y, tileset, tile_ul, render_scale);
-                g_graphics->render_tile(left_col_x, screen_y + tile_h, tileset, tile_ll, render_scale);
+                g_graphics->render_tile(left_col_x, screen_y + tile_h, tileset, tile_ll,
+                                        render_scale);
                 g_graphics->render_tile(right_col_x, screen_y, tileset, tile_ur, render_scale);
-                g_graphics->render_tile(right_col_x, screen_y + tile_h, tileset, tile_lr, render_scale);
+                g_graphics->render_tile(right_col_x, screen_y + tile_h, tileset, tile_lr,
+                                        render_scale);
 
                 // Redraw the wall columns beside the doorway so the leaves slide
                 // behind the surrounding tiles instead of overlapping them.
-                redraw_world_tile(static_cast<int>(door_world_x) - 2, static_cast<int>(door_world_y));
-                redraw_world_tile(static_cast<int>(door_world_x) - 2, static_cast<int>(door_world_y) + 2);
-                redraw_world_tile(static_cast<int>(door_world_x) + 4, static_cast<int>(door_world_y));
-                redraw_world_tile(static_cast<int>(door_world_x) + 4, static_cast<int>(door_world_y) + 2);
+                redraw_world_tile(static_cast<int>(door_world_x) - 2,
+                                  static_cast<int>(door_world_y));
+                redraw_world_tile(static_cast<int>(door_world_x) - 2,
+                                  static_cast<int>(door_world_y) + 2);
+                redraw_world_tile(static_cast<int>(door_world_x) + 4,
+                                  static_cast<int>(door_world_y));
+                redraw_world_tile(static_cast<int>(door_world_x) + 4,
+                                  static_cast<int>(door_world_y) + 2);
             }
 
             SDL_SetRenderDrawColor(renderer, prev_r, prev_g, prev_b, prev_a);
@@ -1429,7 +1402,7 @@ int main(int argc, char* argv[]) {
                 // Center player on screen relative to camera
                 // Player is 2 units wide, 4 units tall in game coords
                 int screen_x = (comic_x - camera_x) * render_scale + render_scale;  // Center X
-                int screen_y = comic_y * render_scale + render_scale * 2; // Center Y
+                int screen_y = comic_y * render_scale + render_scale * 2;           // Center Y
                 int player_width = render_scale * 2;
                 const int player_full_height = render_scale * 4;
                 if (should_clip_player_death_render()) {
@@ -1437,24 +1410,16 @@ int main(int argc, char* argv[]) {
                     // viewport so the sinking effect matches natural SDL clipping.
                     // sprite_top_y == comic_y * render_scale (center Y - half height).
                     const int sprite_top_y = screen_y - player_full_height / 2;
-                    const int clip_h = std::clamp(
-                        playfield_viewport.h - sprite_top_y, 0, player_full_height);
+                    const int clip_h =
+                        std::clamp(playfield_viewport.h - sprite_top_y, 0, player_full_height);
                     if (clip_h > 0) {
-                        g_graphics->render_sprite_top_clip_scaled(
-                            screen_x,
-                            screen_y,
-                            frame->sprite,
-                            player_width,
-                            player_full_height,
-                            clip_h);
+                        g_graphics->render_sprite_top_clip_scaled(screen_x, screen_y, frame->sprite,
+                                                                  player_width, player_full_height,
+                                                                  clip_h);
                     }
                 } else {
-                    g_graphics->render_sprite_centered_scaled(
-                        screen_x,
-                        screen_y,
-                        frame->sprite,
-                        player_width,
-                        player_full_height);
+                    g_graphics->render_sprite_centered_scaled(screen_x, screen_y, frame->sprite,
+                                                              player_width, player_full_height);
                 }
             }
         }
@@ -1462,19 +1427,16 @@ int main(int argc, char* argv[]) {
         render_door_animation_overlay(true);
 
         if (comic_is_teleporting) {
-            const uint8_t last_teleport_frame =
-                static_cast<uint8_t>(teleport_sprites.size() - 1);
+            const uint8_t last_teleport_frame = static_cast<uint8_t>(teleport_sprites.size() - 1);
             const uint8_t source_frame = std::min(teleport_animation, last_teleport_frame);
             if (teleport_sprites[source_frame]) {
-                int source_screen_x = (static_cast<int>(teleport_source_x) - camera_x) * render_scale + render_scale;
-                int source_screen_y = static_cast<int>(teleport_source_y) * render_scale + render_scale * 2;
-                g_graphics->render_sprite_centered_scaled(
-                    source_screen_x,
-                    source_screen_y,
-                    *teleport_sprites[source_frame],
-                    render_scale * 2,
-                    render_scale * 4
-                );
+                int source_screen_x =
+                    (static_cast<int>(teleport_source_x) - camera_x) * render_scale + render_scale;
+                int source_screen_y =
+                    static_cast<int>(teleport_source_y) * render_scale + render_scale * 2;
+                g_graphics->render_sprite_centered_scaled(source_screen_x, source_screen_y,
+                                                          *teleport_sprites[source_frame],
+                                                          render_scale * 2, render_scale * 4);
             }
 
             if (teleport_animation >= 1) {
@@ -1482,16 +1444,13 @@ int main(int argc, char* argv[]) {
                 const uint8_t dest_frame = std::min(destination_phase, last_teleport_frame);
                 if (teleport_sprites[dest_frame]) {
                     int destination_screen_x =
-                        (static_cast<int>(teleport_destination_x) - camera_x) * render_scale + render_scale;
+                        (static_cast<int>(teleport_destination_x) - camera_x) * render_scale +
+                        render_scale;
                     int destination_screen_y =
                         static_cast<int>(teleport_destination_y) * render_scale + render_scale * 2;
                     g_graphics->render_sprite_centered_scaled(
-                        destination_screen_x,
-                        destination_screen_y,
-                        *teleport_sprites[dest_frame],
-                        render_scale * 2,
-                        render_scale * 4
-                    );
+                        destination_screen_x, destination_screen_y, *teleport_sprites[dest_frame],
+                        render_scale * 2, render_scale * 4);
                 }
             }
         }
@@ -1502,7 +1461,7 @@ int main(int argc, char* argv[]) {
 
         // Restore full renderer viewport before rendering debug overlay.
         SDL_RenderSetViewport(renderer, nullptr);
-        
+
         // Render debug overlay if enabled via F3 (in full window space)
         if (g_cheats->should_show_debug_overlay()) {
             g_graphics->render_debug_overlay();
@@ -1512,21 +1471,12 @@ int main(int argc, char* argv[]) {
         // Draw in the same 320x200 letterboxed coordinate space as SYS003.
         SDL_RenderSetViewport(renderer, &gameplay_frame_rect);
         SDL_RenderSetScale(renderer, letterbox_scale, letterbox_scale);
-        ui_system.render_hud(
-            score_bytes,
-            comic_num_lives,
-            comic_hp,
-            actor_system.fireball_meter,
-            actor_system.comic_firepower,
-            actor_system.comic_has_corkscrew != 0,
-            comic_has_door_key != 0,
-            actor_system.comic_has_teleport_wand != 0,
-            actor_system.comic_has_lantern != 0,
-            actor_system.comic_has_gems != 0,
-            actor_system.comic_has_crown != 0,
-            actor_system.comic_has_gold != 0,
-            comic_jump_power
-        );
+        ui_system.render_hud(score_bytes, comic_num_lives, comic_hp, actor_system.fireball_meter,
+                             actor_system.comic_firepower, actor_system.comic_has_corkscrew != 0,
+                             comic_has_door_key != 0, actor_system.comic_has_teleport_wand != 0,
+                             actor_system.comic_has_lantern != 0, actor_system.comic_has_gems != 0,
+                             actor_system.comic_has_crown != 0, actor_system.comic_has_gold != 0,
+                             comic_jump_power);
         SDL_RenderSetScale(renderer, 1.0f, 1.0f);
         SDL_RenderSetViewport(renderer, nullptr);
 
@@ -1540,8 +1490,7 @@ int main(int argc, char* argv[]) {
                 gameplay_frame_rect.x + static_cast<int>(pause_x_ega * letterbox_scale),
                 gameplay_frame_rect.y + static_cast<int>(pause_y_ega * letterbox_scale),
                 static_cast<int>(pause_width_ega * letterbox_scale),
-                static_cast<int>(pause_height_ega * letterbox_scale)
-            };
+                static_cast<int>(pause_height_ega * letterbox_scale)};
             SDL_RenderCopy(renderer, pause_sprite->texture.texture, nullptr, &pause_rect);
         }
 

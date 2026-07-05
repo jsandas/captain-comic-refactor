@@ -1,0 +1,68 @@
+name: Code Quality
+
+on:
+  workflow_dispatch:
+  push:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cppcheck:
+    name: Static Analysis (cppcheck)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      # - name: Run cppcheck
+      #   run: |
+      #     docker run --rm -v ${{ github.workspace }}:/workspace \
+      #     --workdir /workspace \
+      #     alpine:edge \
+      #     sh -c "apk add --no-cache cppcheck; \
+      #     cppcheck --enable=all \
+      #       --inconclusive \
+      #       --suppress=missingIncludeSystem \
+      #       --error-exitcode=1 \
+      #       --inline-suppr \
+      #       --check-level=exhaustive \
+      #       -I include \
+      #       src tests"
+
+  clang-format:
+    name: Format Check (clang-format)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v6
+      
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      
+      - name: Check code formatting
+        run: |
+          # Find all C++ files and check if they match clang-format style
+          find src include tests \
+            \( -name "*.cpp" -o -name "*.hpp" -o -name "*.cc" -o -name "*.h" \) \
+            -print0 | xargs -0 clang-format --dry-run --Werror
+
+  # compiler-warnings:
+  #   name: Compiler Warnings Check
+  #   runs-on: ubuntu-latest
+    
+  #   steps:
+  #     - uses: actions/checkout@v6
+      
+  #     - name: Install dependencies
+  #       run: sudo apt-get update && sudo apt-get install -y cmake g++ libsdl2-dev
+      
+  #     - name: Configure CMake with strict warnings
+  #       run: |
+  #         cmake -B build -S . \
+  #           -DCMAKE_BUILD_TYPE=Debug \
+  #           -DCMAKE_CXX_FLAGS="-Wall -Wextra -Wpedantic -Werror"
+      
+  #     - name: Build with strict warnings
+  #       run: cmake --build build --config Debug

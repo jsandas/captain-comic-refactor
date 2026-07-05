@@ -2,6 +2,7 @@
 #define TITLE_SEQUENCE_H
 
 #include <SDL2/SDL.h>
+
 #include <cstdint>
 
 // Forward declaration
@@ -138,4 +139,4 @@ uint32_t score_bytes_to_uint32(const uint8_t score_bytes[3]);
 bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
                             const uint8_t* score_bytes);
 
-#endif // TITLE_SEQUENCE_H
+#endif  // TITLE_SEQUENCE_H

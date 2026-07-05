@@ -4,6 +4,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
+
 #include <algorithm>
 #include <array>
 #include <iostream>
@@ -49,39 +50,39 @@ constexpr int NOTE_B4 = 494;
 // These match the original PC speaker implementation
 
 // Door sound: 0x0f00, 0x0d00, 0x0c00, 0x0b00, 0x0a00, 0x0b00, 0x0c00, 0x0d00, 0x0f00
-constexpr int FREQ_DOOR_1 = 310;   // 0x0f00
-constexpr int FREQ_DOOR_2 = 358;   // 0x0d00
-constexpr int FREQ_DOOR_3 = 388;   // 0x0c00
-constexpr int FREQ_DOOR_4 = 423;   // 0x0b00
-constexpr int FREQ_DOOR_5 = 466;   // 0x0a00
+constexpr int FREQ_DOOR_1 = 310;  // 0x0f00
+constexpr int FREQ_DOOR_2 = 358;  // 0x0d00
+constexpr int FREQ_DOOR_3 = 388;  // 0x0c00
+constexpr int FREQ_DOOR_4 = 423;  // 0x0b00
+constexpr int FREQ_DOOR_5 = 466;  // 0x0a00
 
 // Fire sound: 0x2000, 0x1e00
-constexpr int FREQ_FIRE_1 = 145;   // 0x2000
-constexpr int FREQ_FIRE_2 = 155;   // 0x1e00
+constexpr int FREQ_FIRE_1 = 145;  // 0x2000
+constexpr int FREQ_FIRE_2 = 155;  // 0x1e00
 
 // Hit enemy sound: 0x0800, 0x0400
-constexpr int FREQ_HIT_1 = 582;    // 0x0800
-constexpr int FREQ_HIT_2 = 1165;   // 0x0400
+constexpr int FREQ_HIT_1 = 582;   // 0x0800
+constexpr int FREQ_HIT_2 = 1165;  // 0x0400
 
 // Collect item: 0x0fda, 0x0c90, 0x0a91, 0x0800
-constexpr int FREQ_COLLECT_1 = 294;   // 0x0fda
-constexpr int FREQ_COLLECT_2 = 371;   // 0x0c90
-constexpr int FREQ_COLLECT_3 = 441;   // 0x0a91
-constexpr int FREQ_COLLECT_4 = 582;   // 0x0800
+constexpr int FREQ_COLLECT_1 = 294;  // 0x0fda
+constexpr int FREQ_COLLECT_2 = 371;  // 0x0c90
+constexpr int FREQ_COLLECT_3 = 441;  // 0x0a91
+constexpr int FREQ_COLLECT_4 = 582;  // 0x0800
 
 // Teleport: 0x2000, 0x1e00, 0x1c00, 0x1a00, 0x1c00, 0x1e00, 0x2000
-constexpr int FREQ_TELEPORT_1 = 145;   // 0x2000
-constexpr int FREQ_TELEPORT_2 = 155;   // 0x1e00
-constexpr int FREQ_TELEPORT_3 = 166;   // 0x1c00
-constexpr int FREQ_TELEPORT_4 = 179;   // 0x1a00
+constexpr int FREQ_TELEPORT_1 = 145;  // 0x2000
+constexpr int FREQ_TELEPORT_2 = 155;  // 0x1e00
+constexpr int FREQ_TELEPORT_3 = 166;  // 0x1c00
+constexpr int FREQ_TELEPORT_4 = 179;  // 0x1a00
 
 // Death sound: descending tones   0x3000, 0x3800, 0x4000, 0x0800, 0x1000, 0x1800
-constexpr int FREQ_DEATH_1 = 97;    // 0x3000
-constexpr int FREQ_DEATH_2 = 83;    // 0x3800
-constexpr int FREQ_DEATH_3 = 72;    // 0x4000
-constexpr int FREQ_DEATH_4 = 582;   // 0x0800
-constexpr int FREQ_DEATH_5 = 291;   // 0x1000
-constexpr int FREQ_DEATH_6 = 194;   // 0x1800
+constexpr int FREQ_DEATH_1 = 97;   // 0x3000
+constexpr int FREQ_DEATH_2 = 83;   // 0x3800
+constexpr int FREQ_DEATH_3 = 72;   // 0x4000
+constexpr int FREQ_DEATH_4 = 582;  // 0x0800
+constexpr int FREQ_DEATH_5 = 291;  // 0x1000
+constexpr int FREQ_DEATH_6 = 194;  // 0x1800
 
 // "Too bad" sound (SOUND_TOO_BAD in original C code): 130, 146, 130, 160 Hz
 constexpr int FREQ_TOO_BAD_1 = 130;
@@ -111,8 +112,6 @@ constexpr int FREQ_MATERIALIZE_400 = 400;
 constexpr int FREQ_MATERIALIZE_600 = 600;
 constexpr int FREQ_MATERIALIZE_900 = 900;
 
-
-
 // ===== Sound Definition Structure =====
 struct FrequencyNote {
     int frequency_hz;
@@ -122,51 +121,47 @@ struct FrequencyNote {
 // ===== Sound Sequences (matching original PC speaker sounds) =====
 // Each sound is a sequence of frequencies played in order
 
-static const std::vector<FrequencyNote> SOUND_FIRE_SEQUENCE = {
-    {FREQ_FIRE_1, 1}, {FREQ_FIRE_2, 1}
-};
+static const std::vector<FrequencyNote> SOUND_FIRE_SEQUENCE = {{FREQ_FIRE_1, 1}, {FREQ_FIRE_2, 1}};
 
-static const std::vector<FrequencyNote> SOUND_ITEM_COLLECT_SEQUENCE = {
-    {FREQ_COLLECT_1, 2}, {FREQ_COLLECT_2, 2}, {FREQ_COLLECT_3, 2}, {FREQ_COLLECT_4, 2}
-};
+static const std::vector<FrequencyNote> SOUND_ITEM_COLLECT_SEQUENCE = {{FREQ_COLLECT_1, 2},
+                                                                       {FREQ_COLLECT_2, 2},
+                                                                       {FREQ_COLLECT_3, 2},
+                                                                       {FREQ_COLLECT_4, 2}};
 
 static const std::vector<FrequencyNote> SOUND_DOOR_OPEN_SEQUENCE = {
     {FREQ_DOOR_1, 1}, {FREQ_DOOR_2, 1}, {FREQ_DOOR_3, 1}, {FREQ_DOOR_4, 1}, {FREQ_DOOR_5, 1},
-    {FREQ_DOOR_4, 1}, {FREQ_DOOR_3, 1}, {FREQ_DOOR_2, 1}, {FREQ_DOOR_1, 1}
-};
+    {FREQ_DOOR_4, 1}, {FREQ_DOOR_3, 1}, {FREQ_DOOR_2, 1}, {FREQ_DOOR_1, 1}};
 
 static const std::vector<FrequencyNote> SOUND_STAGE_TRANSITION_SEQUENCE = {
     {NOTE_C4, 3}, {NOTE_D4, 3}, {NOTE_F4, 6}, {NOTE_F4, 6},
-    {NOTE_G4, 3}, {NOTE_A4, 6}, {NOTE_G4, 6}
-};
+    {NOTE_G4, 3}, {NOTE_A4, 6}, {NOTE_G4, 6}};
 
-static const std::vector<FrequencyNote> SOUND_ENEMY_HIT_SEQUENCE = {
-    {FREQ_HIT_1, 1}, {FREQ_HIT_2, 1}
-};
+static const std::vector<FrequencyNote> SOUND_ENEMY_HIT_SEQUENCE = {{FREQ_HIT_1, 1},
+                                                                    {FREQ_HIT_2, 1}};
 
-static const std::vector<FrequencyNote> SOUND_PLAYER_HIT_SEQUENCE = {
-    {FREQ_DEATH_1, 2}, {FREQ_DEATH_2, 2}, {FREQ_DEATH_3, 2}
-};
+static const std::vector<FrequencyNote> SOUND_PLAYER_HIT_SEQUENCE = {{FREQ_DEATH_1, 2},
+                                                                     {FREQ_DEATH_2, 2},
+                                                                     {FREQ_DEATH_3, 2}};
 
 static const std::vector<FrequencyNote> SOUND_PLAYER_DIE_SEQUENCE = {
     {FREQ_DEATH_1, 1}, {FREQ_DEATH_2, 1}, {FREQ_DEATH_3, 1},
-    {FREQ_DEATH_4, 1}, {FREQ_DEATH_5, 1}, {FREQ_DEATH_6, 2}
-};
+    {FREQ_DEATH_4, 1}, {FREQ_DEATH_5, 1}, {FREQ_DEATH_6, 2}};
 
-static const std::vector<FrequencyNote> SOUND_TOO_BAD_SEQUENCE = {
-    {FREQ_TOO_BAD_1, 5}, {FREQ_TOO_BAD_2, 5},
-    {FREQ_TOO_BAD_1, 5}, {FREQ_TOO_BAD_3, 10}
-};
+static const std::vector<FrequencyNote> SOUND_TOO_BAD_SEQUENCE = {{FREQ_TOO_BAD_1, 5},
+                                                                  {FREQ_TOO_BAD_2, 5},
+                                                                  {FREQ_TOO_BAD_1, 5},
+                                                                  {FREQ_TOO_BAD_3, 10}};
 
 static const std::vector<FrequencyNote> SOUND_GAME_OVER_SEQUENCE = {
-    {NOTE_B3, 2}, {NOTE_C4, 4}, {NOTE_D4, 2}, {NOTE_E4, 6},
-    {NOTE_G4, 7}, {NOTE_FS4, 5}, {NOTE_E4, 2}, {NOTE_D4, 4}, {NOTE_E4, 15}
-};
+    {NOTE_B3, 2},  {NOTE_C4, 4}, {NOTE_D4, 2}, {NOTE_E4, 6}, {NOTE_G4, 7},
+    {NOTE_FS4, 5}, {NOTE_E4, 2}, {NOTE_D4, 4}, {NOTE_E4, 15}};
 
 // Extra life award sound (SOUND_EXTRA_LIFE in comic-c).
-static const std::vector<FrequencyNote> SOUND_EXTRA_LIFE_SEQUENCE = {
-    {NOTE_B4, 5}, {NOTE_D5, 6}, {NOTE_B4, 2}, {NOTE_C5, 5}, {NOTE_D5, 5}
-};
+static const std::vector<FrequencyNote> SOUND_EXTRA_LIFE_SEQUENCE = {{NOTE_B4, 5},
+                                                                     {NOTE_D5, 6},
+                                                                     {NOTE_B4, 2},
+                                                                     {NOTE_C5, 5},
+                                                                     {NOTE_D5, 5}};
 
 static const std::vector<FrequencyNote> SOUND_MATERIALIZE_SEQUENCE = {
     {FREQ_MATERIALIZE_200, 1}, {FREQ_MATERIALIZE_220, 1}, {FREQ_MATERIALIZE_210, 1},
@@ -175,34 +170,29 @@ static const std::vector<FrequencyNote> SOUND_MATERIALIZE_SEQUENCE = {
     {FREQ_MATERIALIZE_300, 1}, {FREQ_MATERIALIZE_250, 1}, {FREQ_MATERIALIZE_200, 1},
     {FREQ_MATERIALIZE_150, 1}, {FREQ_MATERIALIZE_125, 1}, {FREQ_MATERIALIZE_110, 1},
     {FREQ_MATERIALIZE_105, 1}, {FREQ_MATERIALIZE_100, 1}, {FREQ_MATERIALIZE_99, 1},
-    {FREQ_MATERIALIZE_98, 1}, {FREQ_MATERIALIZE_97, 1}, {FREQ_MATERIALIZE_96, 1},
-    {FREQ_MATERIALIZE_95, 1}, {FREQ_MATERIALIZE_94, 1}
-};
+    {FREQ_MATERIALIZE_98, 1},  {FREQ_MATERIALIZE_97, 1},  {FREQ_MATERIALIZE_96, 1},
+    {FREQ_MATERIALIZE_95, 1},  {FREQ_MATERIALIZE_94, 1}};
 
 static const std::vector<FrequencyNote> SOUND_TELEPORT_SEQUENCE = {
     {FREQ_TELEPORT_1, 2}, {FREQ_TELEPORT_2, 2}, {FREQ_TELEPORT_3, 2}, {FREQ_TELEPORT_4, 2},
-    {FREQ_TELEPORT_3, 2}, {FREQ_TELEPORT_2, 2}, {FREQ_TELEPORT_1, 2}
-};
+    {FREQ_TELEPORT_3, 2}, {FREQ_TELEPORT_2, 2}, {FREQ_TELEPORT_1, 2}};
 
 // ===== Music Sequences (Looping) =====
 // Title music - played during title sequence and victory sequence
 // Ported from jsandas/comic-c SOUND_TITLE
 static const std::vector<FrequencyNote> MUSIC_TITLE_SEQUENCE = {
-    {NOTE_D3, 3}, {NOTE_E3, 3}, {NOTE_F3, 6}, {NOTE_A3, 3}, {NOTE_A3, 6},
-    {NOTE_A3, 3}, {NOTE_A3, 3}, {NOTE_A3, 3}, {NOTE_G3, 6}, {NOTE_F3, 6},
-    {NOTE_E3, 6}, {NOTE_D3, 3}, {NOTE_E3, 3}, {NOTE_F3, 6}, {NOTE_G3, 3},
-    {NOTE_G3, 5}, {NOTE_G3, 3}, {NOTE_G3, 3}, {NOTE_G3, 3}, {NOTE_F3, 6},
-    {NOTE_E3, 6}, {NOTE_D3, 6}, {NOTE_D3, 3}, {NOTE_E3, 3}, {NOTE_F3, 6},
-    {NOTE_A3, 3}, {NOTE_A3, 5}, {NOTE_A3, 3}, {NOTE_A3, 3}, {NOTE_A3, 3},
-    {NOTE_G3, 6}, {NOTE_F3, 7}, {NOTE_E3, 12}, {NOTE_A3, 6}, {NOTE_G3, 3},
-    {NOTE_F3, 6}, {NOTE_E3, 3}, {NOTE_D3, 9}, {NOTE_F3, 3}, {NOTE_E3, 6},
-    {NOTE_D3, 12}, {NOTE_A3, 14}, {NOTE_G3, 3}, {NOTE_F3, 3}, {NOTE_E3, 3},
-    {NOTE_F3, 13}, {NOTE_D3, 13}, {NOTE_G3, 15}, {NOTE_F3, 3}, {NOTE_E3, 3},
-    {NOTE_D3, 3}, {NOTE_E3, 13}, {NOTE_C3, 13}, {NOTE_A3, 16}, {NOTE_G3, 3},
-    {NOTE_F3, 3}, {NOTE_E3, 3}, {NOTE_F3, 13}, {NOTE_D3, 11}, {NOTE_A3, 6},
-    {NOTE_G3, 3}, {NOTE_F3, 6}, {NOTE_E3, 3}, {NOTE_D3, 10}, {NOTE_F3, 3},
-    {NOTE_E3, 6}, {NOTE_D3, 10}
-};
+    {NOTE_D3, 3}, {NOTE_E3, 3}, {NOTE_F3, 6},  {NOTE_A3, 3},  {NOTE_A3, 6},  {NOTE_A3, 3},
+    {NOTE_A3, 3}, {NOTE_A3, 3}, {NOTE_G3, 6},  {NOTE_F3, 6},  {NOTE_E3, 6},  {NOTE_D3, 3},
+    {NOTE_E3, 3}, {NOTE_F3, 6}, {NOTE_G3, 3},  {NOTE_G3, 5},  {NOTE_G3, 3},  {NOTE_G3, 3},
+    {NOTE_G3, 3}, {NOTE_F3, 6}, {NOTE_E3, 6},  {NOTE_D3, 6},  {NOTE_D3, 3},  {NOTE_E3, 3},
+    {NOTE_F3, 6}, {NOTE_A3, 3}, {NOTE_A3, 5},  {NOTE_A3, 3},  {NOTE_A3, 3},  {NOTE_A3, 3},
+    {NOTE_G3, 6}, {NOTE_F3, 7}, {NOTE_E3, 12}, {NOTE_A3, 6},  {NOTE_G3, 3},  {NOTE_F3, 6},
+    {NOTE_E3, 3}, {NOTE_D3, 9}, {NOTE_F3, 3},  {NOTE_E3, 6},  {NOTE_D3, 12}, {NOTE_A3, 14},
+    {NOTE_G3, 3}, {NOTE_F3, 3}, {NOTE_E3, 3},  {NOTE_F3, 13}, {NOTE_D3, 13}, {NOTE_G3, 15},
+    {NOTE_F3, 3}, {NOTE_E3, 3}, {NOTE_D3, 3},  {NOTE_E3, 13}, {NOTE_C3, 13}, {NOTE_A3, 16},
+    {NOTE_G3, 3}, {NOTE_F3, 3}, {NOTE_E3, 3},  {NOTE_F3, 13}, {NOTE_D3, 11}, {NOTE_A3, 6},
+    {NOTE_G3, 3}, {NOTE_F3, 6}, {NOTE_E3, 3},  {NOTE_D3, 10}, {NOTE_F3, 3},  {NOTE_E3, 6},
+    {NOTE_D3, 10}};
 
 // ===== Loaded Sound Structure =====
 struct LoadedSound {
@@ -230,20 +220,19 @@ int g_music_channel = -1;  // Channel dedicated to music playback
 
 // ===== Sound Priorities =====
 constexpr std::array<uint8_t, static_cast<size_t>(GameSound::COUNT)> SOUND_PRIORITIES = {{
-    0,   // UNUSED_0 (no jump sound in original game)
-    0,   // FIRE
-    3,   // ITEM_COLLECT
-    4,   // DOOR_OPEN
-    4,   // STAGE_TRANSITION
-    1,   // ENEMY_HIT
-    2,   // PLAYER_HIT
-    4,   // PLAYER_DIE
-    4,   // GAME_OVER
-    4,   // EXTRA_LIFE
-    4,   // MATERIALIZE
-    2,   // TELEPORT
+    0,  // UNUSED_0 (no jump sound in original game)
+    0,  // FIRE
+    3,  // ITEM_COLLECT
+    4,  // DOOR_OPEN
+    4,  // STAGE_TRANSITION
+    1,  // ENEMY_HIT
+    2,  // PLAYER_HIT
+    4,  // PLAYER_DIE
+    4,  // GAME_OVER
+    4,  // EXTRA_LIFE
+    4,  // MATERIALIZE
+    2,  // TELEPORT
 }};
-
 
 /**
  * Convert game ticks to milliseconds
@@ -255,7 +244,7 @@ static uint16_t ticks_to_ms(uint16_t ticks) {
 
 /**
  * Synthesize a complete sound from a frequency sequence
- * 
+ *
  * Concatenates synthesized square waves for each frequency/duration pair
  * into a single SDL_Chunk.
  */
@@ -414,7 +403,7 @@ static void cleanup_audio_init_failure(bool mixer_opened) {
     }
 }
 
-} // namespace
+}  // namespace
 
 bool initialize_audio_system() {
     if (g_audio_initialized) {
@@ -448,12 +437,10 @@ bool initialize_audio_system() {
     }
 
     if (mixer_format != AUDIO_S16SYS) {
-        std::cerr << "Unsupported SDL_mixer format: got format="
-                  << static_cast<int>(mixer_format)
-                  << ", frequency=" << mixer_frequency
-                  << ", channels=" << mixer_channels
-                  << " (expected format=" << static_cast<int>(AUDIO_S16SYS)
-                  << " / AUDIO_S16SYS)." << std::endl;
+        std::cerr << "Unsupported SDL_mixer format: got format=" << static_cast<int>(mixer_format)
+                  << ", frequency=" << mixer_frequency << ", channels=" << mixer_channels
+                  << " (expected format=" << static_cast<int>(AUDIO_S16SYS) << " / AUDIO_S16SYS)."
+                  << std::endl;
         cleanup_audio_init_failure(true);
         return false;
     }
@@ -467,12 +454,12 @@ bool initialize_audio_system() {
     for (size_t index = 0; index < SOUND_PRIORITIES.size(); ++index) {
         GameSound sound = static_cast<GameSound>(index);
         const std::vector<FrequencyNote>* sequence = get_sound_sequence(sound);
-        
+
         // Skip unused sound slots
         if (!sequence) {
             continue;
         }
-        
+
         if (sequence->empty()) {
             std::cerr << "Error: Sound #" << index << " has empty sequence" << std::endl;
             free_loaded_sounds();
@@ -492,17 +479,17 @@ bool initialize_audio_system() {
         g_sounds[index].total_duration_ms = calculate_sequence_duration_ms(*sequence);
         g_sounds[index].priority = SOUND_PRIORITIES[index];
     }
-    
+
     // Load all music tracks
     for (size_t index = 0; index < static_cast<size_t>(GameMusic::COUNT); ++index) {
         GameMusic music = static_cast<GameMusic>(index);
         const std::vector<FrequencyNote>* sequence = get_music_sequence(music);
-        
+
         // Skip unused music slots
         if (!sequence) {
             continue;
         }
-        
+
         if (sequence->empty()) {
             std::cerr << "Error: Music #" << index << " has empty sequence" << std::endl;
             free_loaded_sounds();
@@ -557,9 +544,7 @@ void shutdown_audio_system() {
     }
 }
 
-bool is_audio_system_ready() {
-    return g_audio_initialized;
-}
+bool is_audio_system_ready() { return g_audio_initialized; }
 
 bool play_game_sound(GameSound sound) {
     if (!g_audio_initialized) {
@@ -649,22 +634,15 @@ bool is_game_music_playing() {
     return g_current_music != GameMusic::NONE && Mix_Playing(g_music_channel) != 0;
 }
 
-GameMusic get_current_music() {
-    return g_current_music;
-}
+GameMusic get_current_music() { return g_current_music; }
 
 #else
 
-bool initialize_audio_system() {
-    return false;
-}
+bool initialize_audio_system() { return false; }
 
-void shutdown_audio_system() {
-}
+void shutdown_audio_system() {}
 
-bool is_audio_system_ready() {
-    return false;
-}
+bool is_audio_system_ready() { return false; }
 
 bool play_game_sound(GameSound sound) {
     (void)sound;
@@ -676,14 +654,9 @@ bool play_game_music(GameMusic music) {
     return false;
 }
 
-void stop_game_music() {
-}
+void stop_game_music() {}
 
-bool is_game_music_playing() {
-    return false;
-}
+bool is_game_music_playing() { return false; }
 
-GameMusic get_current_music() {
-    return GameMusic::NONE;
-}
+GameMusic get_current_music() { return GameMusic::NONE; }
 #endif

@@ -1,35 +1,33 @@
-#include "test_helpers.h"
-#include "test_cases.h"
-#include "../include/physics.h"
 #include <SDL2/SDL.h>
+
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+
+#include "../include/physics.h"
+#include "test_cases.h"
+#include "test_helpers.h"
 
 namespace {
 bool write_minimal_png(const std::filesystem::path& path) {
     // 1x1 opaque white PNG.
     static const unsigned char kPngData[] = {
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4,
-        0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41,
-        0x54, 0x78, 0x9C, 0x63, 0xF8, 0xFF, 0xFF, 0xFF,
-        0x7F, 0x00, 0x09, 0xFB, 0x03, 0xFD, 0x2A, 0x86,
-        0xE3, 0x8A, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
-        0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
-    };
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48,
+        0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00,
+        0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x44, 0x41, 0x54, 0x78,
+        0x9C, 0x63, 0xF8, 0xFF, 0xFF, 0xFF, 0x7F, 0x00, 0x09, 0xFB, 0x03, 0xFD, 0x2A, 0x86,
+        0xE3, 0x8A, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
 
     std::ofstream out(path, std::ios::binary);
     if (!out.good()) {
         return false;
     }
 
-    out.write(reinterpret_cast<const char*>(kPngData), static_cast<std::streamsize>(sizeof(kPngData)));
+    out.write(reinterpret_cast<const char*>(kPngData),
+              static_cast<std::streamsize>(sizeof(kPngData)));
     return out.good();
 }
-} // namespace
+}  // namespace
 
 void test_animation_looping() {
     reset_physics_state();
@@ -78,15 +76,17 @@ void test_enemy_animation_sequence() {
     reset_physics_state();
     std::vector<uint8_t> loop_sequence = build_enemy_animation_sequence(3, ENEMY_ANIMATION_LOOP);
     check(loop_sequence == std::vector<uint8_t>({0, 1, 2}),
-        "enemy loop sequence should be 0,1,2 for 3 frames");
+          "enemy loop sequence should be 0,1,2 for 3 frames");
 
-    std::vector<uint8_t> alternate_sequence = build_enemy_animation_sequence(3, ENEMY_ANIMATION_ALTERNATE);
+    std::vector<uint8_t> alternate_sequence =
+        build_enemy_animation_sequence(3, ENEMY_ANIMATION_ALTERNATE);
     check(alternate_sequence == std::vector<uint8_t>({0, 1, 2, 1}),
-        "enemy alternate sequence should be 0,1,2,1 for 3 frames");
+          "enemy alternate sequence should be 0,1,2,1 for 3 frames");
 
-    std::vector<uint8_t> alternate_sequence_four = build_enemy_animation_sequence(4, ENEMY_ANIMATION_ALTERNATE);
+    std::vector<uint8_t> alternate_sequence_four =
+        build_enemy_animation_sequence(4, ENEMY_ANIMATION_ALTERNATE);
     check(alternate_sequence_four == std::vector<uint8_t>({0, 1, 2, 3, 2, 1}),
-        "enemy alternate sequence should be 0,1,2,3,2,1 for 4 frames");
+          "enemy alternate sequence should be 0,1,2,3,2,1 for 4 frames");
 
     std::vector<uint8_t> empty_sequence = build_enemy_animation_sequence(0, ENEMY_ANIMATION_LOOP);
     check(empty_sequence.empty(), "enemy sequence should be empty for 0 frames");
@@ -99,8 +99,7 @@ void test_tileset_blackout_state_tracking() {
     GraphicsSystem graphics(nullptr);
 
     // Default: no entry recorded for an unknown level.
-    check(!graphics.is_tileset_blacked_out("castle"),
-          "blackout: unset level should report false");
+    check(!graphics.is_tileset_blacked_out("castle"), "blackout: unset level should report false");
 
     // Record blackout=true with no tileset present (early-return path).
     graphics.set_tileset_blackout("castle", true);
@@ -114,9 +113,9 @@ void test_tileset_blackout_state_tracking() {
 
     // A different level must be tracked independently.
     graphics.set_tileset_blackout("forest", true);
-        check(graphics.is_tileset_blacked_out("forest"),
+    check(graphics.is_tileset_blacked_out("forest"),
           "blackout: separate level state should be true");
-        check(!graphics.is_tileset_blacked_out("castle"),
+    check(!graphics.is_tileset_blacked_out("castle"),
           "blackout: castle state must remain false after forest was set");
 }
 
@@ -197,13 +196,8 @@ void test_tileset_blackout_state_tracks_unloaded_tileset() {
         return;
     }
 
-    SDL_Window* window = SDL_CreateWindow(
-        "test_blackout",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        64,
-        64,
-        SDL_WINDOW_HIDDEN);
+    SDL_Window* window = SDL_CreateWindow("test_blackout", SDL_WINDOWPOS_UNDEFINED,
+                                          SDL_WINDOWPOS_UNDEFINED, 64, 64, SDL_WINDOW_HIDDEN);
     if (window == nullptr) {
         check(false, std::string("SDL window creation failed: ") + SDL_GetError());
         SDL_QuitSubSystem(SDL_INIT_VIDEO);
@@ -289,14 +283,14 @@ void test_playfield_viewport_height_matches_render_scale() {
         const int old_viewport_h = static_cast<int>(EGA_PLAYFIELD_H * ls);
         const int new_viewport_h = rs * PLAYFIELD_HEIGHT;
         check(new_viewport_h >= old_viewport_h,
-            "viewport_h (new) must be >= old formula at scale 3.1");
+              "viewport_h (new) must be >= old formula at scale 3.1");
         // The sprite bottom for a player at comic_y = PLAYFIELD_HEIGHT - 4 (lowest
         // visible position) is (PLAYFIELD_HEIGHT) * rs. That must fit in viewport.
         const int sprite_bottom_at_floor = PLAYFIELD_HEIGHT * rs;
         check(new_viewport_h >= sprite_bottom_at_floor,
-            "new viewport must contain sprite at comic_y = PLAYFIELD_HEIGHT - 4");
+              "new viewport must contain sprite at comic_y = PLAYFIELD_HEIGHT - 4");
         check(old_viewport_h < sprite_bottom_at_floor,
-            "old viewport was too small at scale 3.1 (regression guard)");
+              "old viewport was too small at scale 3.1 (regression guard)");
     }
 
     // Also verify the new formula holds across a broad range of window widths.
@@ -312,7 +306,7 @@ void test_playfield_viewport_height_matches_render_scale() {
         }
     }
     check(all_ok,
-        "render_scale * PLAYFIELD_HEIGHT must always contain the bottom of the playfield sprite");
+          "render_scale * PLAYFIELD_HEIGHT must always contain the bottom of the playfield sprite");
 }
 
 void test_runtime_level_tiles_populated() {

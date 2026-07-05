@@ -1,8 +1,9 @@
-#include "test_helpers.h"
-#include "test_cases.h"
 #include <iostream>
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "test_cases.h"
+#include "test_helpers.h"
 
 static const std::vector<TestCase>& test_registry() {
     static const std::vector<TestCase> tests = {
@@ -14,17 +15,21 @@ static const std::vector<TestCase>& test_registry() {
         {"space_level_uses_lower_gravity", test_space_level_uses_lower_gravity},
         {"jump_top_clamped_to_playfield", test_jump_top_clamped_to_playfield},
         {"player_death_sequence_respawn", test_player_death_sequence_respawn},
-        {"player_death_sequence_last_life_allows_one_more_play", test_player_death_sequence_last_life_allows_one_more_play},
+        {"player_death_sequence_last_life_allows_one_more_play",
+         test_player_death_sequence_last_life_allows_one_more_play},
         {"player_death_sequence_game_over", test_player_death_sequence_game_over},
-        {"teleport_does_not_update_respawn_checkpoint", test_teleport_does_not_update_respawn_checkpoint},
+        {"teleport_does_not_update_respawn_checkpoint",
+         test_teleport_does_not_update_respawn_checkpoint},
         {"door_activation_alignment_x", test_door_activation_alignment_x},
         {"door_activation_alignment_y", test_door_activation_alignment_y},
         {"door_key_requirement", test_door_key_requirement},
         {"door_open_key_requirement", test_door_open_key_requirement},
         {"door_state_update_same_level", test_door_state_update_same_level},
         {"door_state_update_different_level", test_door_state_update_different_level},
-        {"door_animation_phase_progression_and_render_state", test_door_animation_phase_progression_and_render_state},
-        {"door_destination_load_deferred_until_entering_complete", test_door_destination_load_deferred_until_entering_complete},
+        {"door_animation_phase_progression_and_render_state",
+         test_door_animation_phase_progression_and_render_state},
+        {"door_destination_load_deferred_until_entering_complete",
+         test_door_destination_load_deferred_until_entering_complete},
         {"door_entry_sets_checkpoint_for_respawn", test_door_entry_sets_checkpoint_for_respawn},
         {"stage_left_exit_blocked", test_stage_left_exit_blocked},
         {"stage_right_exit_blocked", test_stage_right_exit_blocked},
@@ -43,7 +48,8 @@ static const std::vector<TestCase>& test_registry() {
         {"tileset_blackout_state_tracks_unloaded_tileset",
          test_tileset_blackout_state_tracks_unloaded_tileset},
         {"runtime_level_tiles_populated", test_runtime_level_tiles_populated},
-        {"playfield_viewport_height_matches_render_scale", test_playfield_viewport_height_matches_render_scale},
+        {"playfield_viewport_height_matches_render_scale",
+         test_playfield_viewport_height_matches_render_scale},
 
         // Actors & Items
         {"actor_spawn_one_per_tick", test_actor_spawn_one_per_tick},
@@ -72,7 +78,8 @@ static const std::vector<TestCase>& test_registry() {
 
         // Audio
         {"audio_init_shutdown_idempotency", test_audio_init_shutdown_idempotency},
-        {"audio_graceful_failure_when_not_initialized", test_audio_graceful_failure_when_not_initialized},
+        {"audio_graceful_failure_when_not_initialized",
+         test_audio_graceful_failure_when_not_initialized},
         {"audio_priority_interrupt", test_audio_priority_interrupt},
         {"audio_priority_blocking", test_audio_priority_blocking},
         {"audio_enemy_hit_interrupts_fire", test_audio_enemy_hit_interrupts_fire},
@@ -92,10 +99,11 @@ static const std::vector<TestCase>& test_registry() {
         {"award_points_large_value_above_255", test_award_points_large_value_above_255},
         {"award_points_max_score_saturation", test_award_points_max_score_saturation},
         {"award_points_large_carry_saturation", test_award_points_large_carry_saturation},
-        {"award_points_awards_extra_life_every_50000", test_award_points_awards_extra_life_every_50000},
-        {"award_points_awards_extra_life_after_500_internal_units", test_award_points_awards_extra_life_after_500_internal_units},
-        {"high_score_bytes_conversion", test_high_score_bytes_conversion}
-    };
+        {"award_points_awards_extra_life_every_50000",
+         test_award_points_awards_extra_life_every_50000},
+        {"award_points_awards_extra_life_after_500_internal_units",
+         test_award_points_awards_extra_life_after_500_internal_units},
+        {"high_score_bytes_conversion", test_high_score_bytes_conversion}};
     return tests;
 }
 
