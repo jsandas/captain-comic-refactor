@@ -44,6 +44,7 @@ assets
 build
 original
 reference
+cppcheck.log
 
 tools/generate_tiles
 
