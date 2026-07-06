@@ -89,7 +89,18 @@ void award_extra_life() {
  * ActorSystem constructor
  */
 ActorSystem::ActorSystem()
-    : enemies(MAX_NUM_ENEMIES),
+    : comic_firepower(0),
+      comic_has_corkscrew(0),
+      fireball_meter(0),
+      comic_has_boots(0),
+      comic_has_lantern(0),
+      comic_has_door_key(0),
+      comic_has_teleport_wand(0),
+      comic_has_gems(0),
+      comic_has_crown(0),
+      comic_has_gold(0),
+      comic_num_treasures(0),
+      enemies(MAX_NUM_ENEMIES),
       fireballs(MAX_NUM_FIREBALLS),
       fireball_meter_counter(FIREBALL_METER_COUNTER_INIT),
       item_animation_counter(0),
@@ -108,18 +119,7 @@ ActorSystem::ActorSystem()
       g_comic_x(0),
       g_comic_y(0),
       g_comic_facing(COMIC_FACING_LEFT),
-      g_camera_x(0),
-      comic_firepower(0),
-      comic_has_corkscrew(0),
-      fireball_meter(0),
-      comic_has_boots(0),
-      comic_has_lantern(0),
-      comic_has_door_key(0),
-      comic_has_teleport_wand(0),
-      comic_has_gems(0),
-      comic_has_crown(0),
-      comic_has_gold(0),
-      comic_num_treasures(0) {
+      g_camera_x(0) {
     for (auto& enemy : enemies) {
         enemy.state = ENEMY_STATE_DESPAWNED;
         enemy.spawn_timer_and_animation = 100;
@@ -925,11 +925,8 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
         // Assembly: sar y_vel 3x (arithmetic) → y_vel/8, still negative (e.g. -7>>3 = -1)
         //           neg → positive upward delta; sub al, delta → proposed_y += delta (negative =
         //           up)
-        // Simplified: proposed_y += (int8_t)(y_vel >> ENEMY_VELOCITY_SHIFT)
-        // For y_vel=-7: delta=-1, proposed_y decreases by 1 (moves up 1 unit)
-        int8_t delta = static_cast<int8_t>(enemy->y_vel >> ENEMY_VELOCITY_SHIFT);
-        int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(delta);
-
+        // Simplified: proposed_y += (int8_t)(y_vel / 8);
+        int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(enemy->y_vel / 8);
         if (new_y < 0) {
             // Unsigned underflow → hit top of playfield (.undo_position_change)
             proposed_y = enemy->y;  // restore original (no change)
