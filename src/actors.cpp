@@ -929,6 +929,9 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
         int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(enemy->y_vel / 8);
         if (new_y < 0) {
             // Unsigned underflow → hit top of playfield (.undo_position_change)
+            // cppcheck-suppress redundantAssignment
+            // Intentional reassignment to match .undo_position_change assembly label semantics:
+            // explicitly signals the "undo" path even though proposed_y was already enemy->y
             proposed_y = enemy->y;  // restore original (no change)
         } else {
             uint8_t target_y = static_cast<uint8_t>(new_y);
@@ -956,6 +959,9 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
         // Assembly: inc al; check_vertical; dec al; jnc .apply_gravity (accept move)
         //            else: .start_falling → .undo_position_change (restore original pos)
         if (check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(new_y + 1))) {
+            // cppcheck-suppress redundantAssignment
+            // Intentional reassignment to match .undo_position_change assembly label semantics:
+            // explicitly signals the "undo" path even though proposed_y was already enemy->y
             proposed_y = enemy->y;  // collision: restore original (.undo_position_change)
         } else {
             proposed_y = new_y;  // no collision: accept downward movement
