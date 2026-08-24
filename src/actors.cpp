@@ -242,7 +242,7 @@ void ActorSystem::setup_enemies_for_stage(const level_t* level, int level_index,
             std::string sprite_name = sprite_desc.filename;
             size_t null_pos = sprite_name.find('\0');
             if (null_pos != std::string::npos) {
-                sprite_name = sprite_name.substr(0, null_pos);
+                sprite_name.resize(null_pos);
             }
             while (!sprite_name.empty() && sprite_name.back() == ' ') {
                 sprite_name.pop_back();
@@ -700,7 +700,7 @@ void ActorSystem::handle_single_enemy(int enemy_index) {
 /**
  * Check if enemy should despawn due to distance
  */
-void ActorSystem::check_enemy_despawn(enemy_t* enemy) {
+void ActorSystem::check_enemy_despawn(enemy_t* enemy) const {
     if (!enemy) return;
 
     int16_t x_diff = static_cast<int16_t>(static_cast<int>(enemy->x) - static_cast<int>(g_comic_x));
@@ -713,7 +713,7 @@ void ActorSystem::check_enemy_despawn(enemy_t* enemy) {
 /**
  * Check collision between enemy and player
  */
-void ActorSystem::check_enemy_player_collision(enemy_t* enemy) {
+void ActorSystem::check_enemy_player_collision(enemy_t* enemy) const {
     if (!enemy) return;
 
     if (enemy->state != ENEMY_STATE_SPAWNED) {
@@ -809,7 +809,7 @@ bool ActorSystem::check_vertical_enemy_map_collision(uint8_t x, uint8_t y) const
  * BOUNCE behavior: Diagonal bouncing with independent x/y velocities
  * Used by: Fire Ball, Brave Bird
  */
-void ActorSystem::enemy_behavior_bounce(enemy_t* enemy) {
+void ActorSystem::enemy_behavior_bounce(enemy_t* enemy) const {
     if (!enemy) return;
 
     // Handle restraint (movement throttle)
@@ -914,7 +914,7 @@ void ActorSystem::enemy_behavior_bounce(enemy_t* enemy) {
  *   Restraint only skips horizontal movement; gravity and .check_for_ground always run
  *   .check_for_ground: if y_vel>0, check y+3; on solid: snap y=(y+1)&0xfe, y_vel=0
  */
-void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
+void ActorSystem::enemy_behavior_leap(enemy_t* enemy) const {
     if (!enemy) return;
 
     // proposed_y tracks vertical changes before committing (mirrors ax.lo in assembly)
@@ -1061,7 +1061,7 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) {
  * ROLL behavior: Ground-following movement
  * Used by: Glow Globe
  */
-void ActorSystem::enemy_behavior_roll(enemy_t* enemy) {
+void ActorSystem::enemy_behavior_roll(enemy_t* enemy) const {
     if (!enemy) return;
 
     uint8_t next_x;
@@ -1136,11 +1136,8 @@ void ActorSystem::enemy_behavior_roll(enemy_t* enemy) {
  * SEEK behavior: Pathfinding toward player
  * Used by: Killer Bee
  */
-void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
+void ActorSystem::enemy_behavior_seek(enemy_t* enemy) const {
     if (!enemy) return;
-
-    uint8_t next_x, next_y;
-    bool collision;
 
     // Handle restraint
     if (enemy->restraint == ENEMY_RESTRAINT_SKIP_THIS_TICK) {
@@ -1156,8 +1153,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
     if (enemy->x != g_comic_x) {
         if (enemy->x < g_comic_x) {
             // Move right
-            next_x = static_cast<uint8_t>(enemy->x + 1);
-            collision =
+            uint8_t next_x = static_cast<uint8_t>(enemy->x + 1);
+            bool collision =
                 check_horizontal_enemy_map_collision(static_cast<uint8_t>(next_x + 1), enemy->y);
 
             if (!collision) {
@@ -1171,8 +1168,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
             if (enemy->x == 0) {
                 enemy->x_vel = 1;  // Hit left edge, reverse direction
             } else {
-                next_x = static_cast<uint8_t>(enemy->x - 1);
-                collision = check_horizontal_enemy_map_collision(next_x, enemy->y);
+                uint8_t next_x = static_cast<uint8_t>(enemy->x - 1);
+                bool collision = check_horizontal_enemy_map_collision(next_x, enemy->y);
 
                 if (!collision) {
                     enemy->x = next_x;
@@ -1191,8 +1188,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
     if (enemy->y != g_comic_y) {
         if (enemy->y < g_comic_y) {
             // Move down
-            next_y = static_cast<uint8_t>(enemy->y + 1);
-            collision =
+            uint8_t next_y = static_cast<uint8_t>(enemy->y + 1);
+            bool collision =
                 check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(next_y + 1));
 
             if (!collision) {
@@ -1203,8 +1200,8 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
             }
         } else {
             // Move up
-            next_y = static_cast<uint8_t>(enemy->y - 1);
-            collision = check_vertical_enemy_map_collision(enemy->x, next_y);
+            uint8_t next_y = static_cast<uint8_t>(enemy->y - 1);
+            bool collision = check_vertical_enemy_map_collision(enemy->x, next_y);
 
             if (!collision) {
                 enemy->y = next_y;
@@ -1222,7 +1219,7 @@ void ActorSystem::enemy_behavior_seek(enemy_t* enemy) {
  * SHY behavior: Flees when Comic is facing toward, approaches otherwise
  * Used by: Shy Bird, Spinner
  */
-void ActorSystem::enemy_behavior_shy(enemy_t* enemy) {
+void ActorSystem::enemy_behavior_shy(enemy_t* enemy) const {
     if (!enemy) return;
 
     uint8_t next_x, next_y;

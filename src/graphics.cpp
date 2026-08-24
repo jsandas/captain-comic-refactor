@@ -53,7 +53,7 @@ bool GraphicsSystem::initialize() {
 
     // Try to load a monospace font for debug overlay
     // Try multiple possible font paths and names
-    std::string font_candidates[] = {
+    const std::string font_candidates[] = {
         // macOS system fonts
         "/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Courier.ttc",
         "/System/Library/Fonts/SFNSMono.ttf", "/Library/Fonts/Menlo.ttc",
@@ -152,7 +152,7 @@ TextureInfo GraphicsSystem::load_png(const std::string& filepath) {
     static std::unordered_set<std::string> logged_load_failures;
 
     // Try multiple possible paths
-    std::string possible_paths[] = {filepath, "../" + filepath, "../../" + filepath};
+    const std::string possible_paths[] = {filepath, "../" + filepath, "../../" + filepath};
 
     SDL_Surface* surface = nullptr;
 
@@ -414,7 +414,7 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     std::string sprite_name = sprite_desc.filename;
     size_t null_pos = sprite_name.find('\0');
     if (null_pos != std::string::npos) {
-        sprite_name = sprite_name.substr(0, null_pos);
+        sprite_name.resize(null_pos);
     }
     while (!sprite_name.empty() && sprite_name.back() == ' ') {
         sprite_name.pop_back();
@@ -522,7 +522,7 @@ Animation GraphicsSystem::create_animation(const std::vector<std::string>& sprit
 
     for (const auto& sprite_name : sprite_names) {
         if (load_sprite(sprite_name, direction)) {
-            Sprite* sprite = get_sprite(sprite_name, direction);
+            const Sprite* sprite = get_sprite(sprite_name, direction);
             if (sprite) {
                 AnimationFrame frame;
                 frame.sprite = *sprite;

@@ -268,7 +268,7 @@ static bool key_matches_binding(SDL_Keycode key, SDL_Keycode binding) {
     }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
     // Parse command-line arguments
     bool debug_mode = false;
     bool skip_title = false;
@@ -592,7 +592,7 @@ int main(int argc, char* argv[]) {
         const int comic_height = render_scale * 4;
 
         if (show_comic) {
-            AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
+            const AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
             if (frame) {
                 g_graphics->render_sprite_centered_scaled(comic_screen_x, comic_screen_y,
                                                           frame->sprite, comic_width, comic_height);
@@ -840,8 +840,7 @@ int main(int argc, char* argv[]) {
                     break;
                 }
             }
-        }
-        if (!quit) {
+
             render_beam_in_frame(true, nullptr);
             wait_animation_ticks(1);
         }
@@ -1182,7 +1181,7 @@ int main(int argc, char* argv[]) {
         // Update animation based on state (updates every frame for smooth animation)
         if (game_state == GameState::Playing) {
             current_time = SDL_GetTicks();
-            Animation* previous_animation = current_animation;
+            const Animation* previous_animation = current_animation;
             if (is_player_dying()) {
                 if (should_show_player_death_animation()) {
                     current_animation = &comic_death;
@@ -1400,7 +1399,7 @@ int main(int argc, char* argv[]) {
 
         // Render player sprite
         if (current_animation && door_player_visible) {
-            AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
+            const AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
             if (frame) {
                 // Center player on screen relative to camera
                 // Player is 2 units wide, 4 units tall in game coords

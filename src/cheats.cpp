@@ -329,7 +329,7 @@ void CheatSystem::execute_position_warp() {
     std::cout << "[CHEAT] Position warp complete" << std::endl;
 }
 
-std::string CheatSystem::get_position_input_buffer() const { return position_input_buffer; }
+const std::string& CheatSystem::get_position_input_buffer() const { return position_input_buffer; }
 
 std::string CheatSystem::get_level_warp_prompt() const {
     if (awaiting_level_input) {

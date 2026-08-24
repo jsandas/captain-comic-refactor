@@ -228,11 +228,11 @@ protected:
     void collect_item();
 
     /* AI behavior functions */
-    void enemy_behavior_bounce(enemy_t* enemy);
-    void enemy_behavior_leap(enemy_t* enemy);
-    void enemy_behavior_roll(enemy_t* enemy);
-    void enemy_behavior_seek(enemy_t* enemy);
-    void enemy_behavior_shy(enemy_t* enemy);
+    void enemy_behavior_bounce(enemy_t* enemy) const;
+    void enemy_behavior_leap(enemy_t* enemy) const;
+    void enemy_behavior_roll(enemy_t* enemy) const;
+    void enemy_behavior_seek(enemy_t* enemy) const;
+    void enemy_behavior_shy(enemy_t* enemy) const;
 
     /* Collision detection helpers */
     bool check_horizontal_enemy_map_collision(uint8_t x, uint8_t y) const;

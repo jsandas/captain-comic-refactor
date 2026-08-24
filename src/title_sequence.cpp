@@ -153,7 +153,7 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
     }
 
     // Store original palette colors for restoration.
-    SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
+    const SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
                                 surface->format->palette->colors[PALETTE_REG_ITEMS],
                                 surface->format->palette->colors[PALETTE_REG_TITLE]};
 
@@ -974,7 +974,7 @@ static std::vector<HighScoreEntry> load_high_scores() {
             const uint32_t sc = static_cast<uint32_t>(std::stoul(line.substr(0, sep)));
             std::string nm = line.substr(sep + 1);
             if (static_cast<int>(nm.size()) > MAX_NAME_LENGTH) {
-                nm = nm.substr(0, static_cast<size_t>(MAX_NAME_LENGTH));
+                nm.resize(static_cast<size_t>(MAX_NAME_LENGTH));
             }
             scores.push_back({nm, sc});
         } catch (...) {
@@ -1657,7 +1657,7 @@ bool run_title_sequence(SDL_Renderer* renderer, GraphicsSystem* graphics) {
 SDL_Texture* get_hud_texture() { return s_hud_texture; }
 
 bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
-                            const uint8_t* score_bytes_in) {
+                            const uint8_t* score_bytes) {
     // Load background texture (sys005.ega.png).
     SDL_Texture* bg_texture = nullptr;
     if (graphics) {
@@ -1678,7 +1678,7 @@ bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
     std::vector<HighScoreEntry> scores = load_high_scores();
 
     // Determine the player's score and whether it qualifies.
-    const uint32_t player_score = score_bytes_in ? score_bytes_to_uint32(score_bytes_in) : 0u;
+    const uint32_t player_score = score_bytes ? score_bytes_to_uint32(score_bytes) : 0u;
     const int rank = find_insertion_rank(scores, player_score);
     const bool qualifies = (rank < MAX_HIGH_SCORES);
 

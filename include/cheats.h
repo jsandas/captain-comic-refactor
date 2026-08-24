@@ -34,7 +34,7 @@ public:
     bool is_awaiting_item_input() const { return awaiting_item_input; }
 
     // Get current position input buffer for display
-    std::string get_position_input_buffer() const;
+    const std::string& get_position_input_buffer() const;
     std::string get_level_warp_prompt() const;
 
 private:
