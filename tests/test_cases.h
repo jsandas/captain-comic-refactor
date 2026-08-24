@@ -32,6 +32,7 @@ void test_problematic_levels_have_solid_tiles();
 void test_animation_looping();
 void test_animation_non_looping();
 void test_animation_zero_duration();
+void test_animation_frames_initialize_sprite_state();
 void test_enemy_animation_sequence();
 void test_tileset_blackout_state_tracking();
 void test_asset_path_resolution();

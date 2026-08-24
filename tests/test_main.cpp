@@ -42,6 +42,7 @@ static const std::vector<TestCase>& test_registry() {
         {"animation_looping", test_animation_looping},
         {"animation_non_looping", test_animation_non_looping},
         {"animation_zero_duration", test_animation_zero_duration},
+        {"animation_frames_initialize_sprite_state", test_animation_frames_initialize_sprite_state},
         {"enemy_animation_sequence", test_enemy_animation_sequence},
         {"tileset_blackout_state_tracking", test_tileset_blackout_state_tracking},
         {"asset_path_resolution", test_asset_path_resolution},

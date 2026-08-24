@@ -1131,7 +1131,7 @@ static void build_high_score_text_cache(SDL_Renderer* renderer, TTF_Font* font,
             SDL_Color color = COLOR_NORMAL;
             if (i == 0) {
                 color = COLOR_TITLE;
-            } else if (!lines[i].empty() && lines[i][0] == '>') {
+            } else if (lines[i][0] == '>') {
                 color = COLOR_NEW;
             }
             SDL_Surface* surf = TTF_RenderText_Blended_Wrapped(font, lines[i].c_str(), color,

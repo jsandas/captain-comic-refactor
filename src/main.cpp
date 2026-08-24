@@ -641,9 +641,9 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (!quit) {
-            render_beam_in_frame(false, nullptr);
-            wait_animation_ticks(6);
+        render_beam_in_frame(false, nullptr);
+        if (!wait_animation_ticks(6)) {
+            return;
         }
     };
 
@@ -712,31 +712,41 @@ int main(int argc, char* argv[]) {
         clear_gameplay_key_states();
 
         // Base victory bonus: 20,000 points as twenty 1,000-point tally steps.
-        for (int step = 0; step < 20 && !quit; ++step) {
+        for (int step = 0; step < 20; ++step) {
             play_game_sound(GameSound::ITEM_COLLECT);
             award_points(10);
             render_beam_in_frame(false, nullptr);
-            wait_animation_ticks(1);
+            if (!wait_animation_ticks(1)) {
+                break;
+            }
         }
 
         // Remaining lives bonus: 10,000 points per life, then decrement one life icon.
-        while (comic_num_lives > 0 && !quit) {
-            for (int step = 0; step < 10 && !quit; ++step) {
+        while (comic_num_lives > 0) {
+            for (int step = 0; step < 10; ++step) {
                 play_game_sound(GameSound::ITEM_COLLECT);
                 award_points(10);
                 render_beam_in_frame(false, nullptr);
-                wait_animation_ticks(1);
+                if (!wait_animation_ticks(1)) {
+                    break;
+                }
+            }
+
+            if (quit) {
+                break;
             }
 
             comic_num_lives--;
             render_beam_in_frame(false, nullptr);
-            wait_animation_ticks(3);
+            if (!wait_animation_ticks(3)) {
+                break;
+            }
         }
 
         play_game_music(GameMusic::TITLE);
 
         SDL_Texture* victory_texture = load_fullscreen_texture("sys002.ega.png");
-        if (victory_texture && !quit) {
+        if (victory_texture) {
             render_fullscreen_texture(victory_texture);
             wait_for_new_keypress();
         }
@@ -767,9 +777,6 @@ int main(int argc, char* argv[]) {
             }
 
             wait_for_new_keypress();
-        }
-
-        if (!quit) {
             if (!run_high_scores_screen(renderer, g_graphics, score_bytes)) {
                 quit = true;
             }
@@ -810,15 +817,12 @@ int main(int argc, char* argv[]) {
             wait_animation_ticks(1);
             wait_for_new_keypress();
         }
-
-        if (!quit) {
-            if (!run_high_scores_screen(renderer, g_graphics, score_bytes)) {
-                quit = true;
-            }
+        if (!quit && !run_high_scores_screen(renderer, g_graphics, score_bytes)) {
+            quit = true;
         }
     };
 
-    if (materialize_sprites_loaded && !quit) {
+    if (materialize_sprites_loaded) {
         for (int frame = 0; frame < 15; ++frame) {
             render_beam_in_frame(false, nullptr);
             if (!wait_animation_ticks(1)) {
@@ -837,7 +841,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-
         if (!quit) {
             render_beam_in_frame(true, nullptr);
             wait_animation_ticks(1);

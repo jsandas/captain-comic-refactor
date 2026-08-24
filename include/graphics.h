@@ -23,9 +23,9 @@ constexpr int TILE_SIZE = 16;
 
 // Texture rendering structure
 struct TextureInfo {
-    SDL_Texture* texture;
-    int width;
-    int height;
+    SDL_Texture* texture = nullptr;
+    int width = 0;
+    int height = 0;
 };
 
 // Tileset: contains multiple tile graphics (16x16 pixels each)
@@ -36,15 +36,15 @@ struct Tileset {
 
 // Sprite structure for player and actors
 struct Sprite {
-    TextureInfo texture;
-    int width;
-    int height;
+    TextureInfo texture{};
+    int width = 0;
+    int height = 0;
 };
 
 // Sprite animation frame
 struct AnimationFrame {
-    Sprite sprite;
-    int duration_ms;  // How long to display this frame
+    Sprite sprite{};
+    int duration_ms = 0;  // How long to display this frame
 };
 
 // Animation sequence
@@ -73,7 +73,7 @@ std::vector<uint8_t> build_enemy_animation_sequence(uint8_t num_distinct_frames,
 // Graphics system
 class GraphicsSystem {
 public:
-    GraphicsSystem(SDL_Renderer* renderer);
+    explicit GraphicsSystem(SDL_Renderer* renderer);
     ~GraphicsSystem();
 
     // Initialize - must be called after construction
