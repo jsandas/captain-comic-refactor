@@ -21,7 +21,7 @@ jobs:
         build_type: [Debug, Release]
 
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Install dependencies (Ubuntu)
         if: runner.os == 'Linux'
@@ -31,7 +31,7 @@ jobs:
 
       - name: Setup Sound Linux
         if: runner.os == 'Linux'
-        uses: LABSN/sound-ci-helpers@v1
+        uses: LABSN/sound-ci-helpers@d08c889a7bba7d9b1b059f8f76dac4672ea3a9cf # v1.0.4
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
