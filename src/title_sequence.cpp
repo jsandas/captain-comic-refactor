@@ -154,8 +154,8 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
 
     // Store original palette colors for restoration.
     const SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
-                                surface->format->palette->colors[PALETTE_REG_ITEMS],
-                                surface->format->palette->colors[PALETTE_REG_TITLE]};
+                                      surface->format->palette->colors[PALETTE_REG_ITEMS],
+                                      surface->format->palette->colors[PALETTE_REG_TITLE]};
 
     // Helper: Convert 6-bit EGA color to 8-bit RGB
     auto ega_to_rgb = [](uint8_t ega_6bit) -> uint8_t { return (ega_6bit << 2) | (ega_6bit >> 4); };
