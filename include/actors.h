@@ -100,7 +100,7 @@ public:
     ~ActorSystem();
 
     /* Initialize the actor system */
-    bool initialize();
+    static bool initialize();
 
     /* Update all actors for one game tick */
     void update(uint8_t comic_x, uint8_t comic_y, uint8_t comic_facing, const uint8_t* tiles,
@@ -215,7 +215,7 @@ protected:
     /* Private helper functions */
     bool maybe_spawn_enemy(int enemy_index);
     void handle_single_enemy(int enemy_index);
-    void update_enemy_animation(enemy_t* enemy);
+    static void update_enemy_animation(enemy_t* enemy);
     void check_enemy_despawn(enemy_t* enemy);
     void check_enemy_player_collision(enemy_t* enemy);
 

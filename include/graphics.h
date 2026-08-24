@@ -96,8 +96,8 @@ public:
     Animation create_animation(const std::vector<std::string>& sprite_names,
                                const std::string& direction, int frame_duration_ms,
                                bool looping = true);
-    AnimationFrame* get_current_frame(Animation& anim);
-    void update_animation(Animation& anim, uint32_t current_time);
+    static AnimationFrame* get_current_frame(Animation& anim);
+    static void update_animation(Animation& anim, uint32_t current_time);
 
     // Rendering
     void render_tile(int screen_x, int screen_y, Tileset* tileset, uint8_t tile_id, int scale);
@@ -147,7 +147,7 @@ public:  // made public for testing convenience
     // Determine where an asset file lives on disk by prefixing with the
     // appropriate subdirectory.  This is used internally and also verified by
     // unit tests to prevent regressions when reorganizing the asset tree.
-    std::string get_asset_path(const std::string& filename);
+    static std::string get_asset_path(const std::string& filename);
 
 private:
 };

@@ -259,7 +259,7 @@ Sprite* UISystem::load_ui_sprite(const std::string& sprite_name) {
     return g_graphics->get_sprite(sprite_name, "");
 }
 
-void UISystem::render_sprite_at(Sprite* sprite, int x, int y, int width, int height) {
+void UISystem::render_sprite_at(const Sprite* sprite, int x, int y, int width, int height) {
     if (!g_graphics || !sprite) return;
     g_graphics->render_sprite_scaled(x, y, *sprite, width, height, false);
 }
@@ -276,7 +276,7 @@ void UISystem::render_hud(const uint8_t score_bytes[3], uint8_t num_lives, uint8
                      has_gems, has_crown, has_gold, jump_power);
 }
 
-void UISystem::render_score(const uint8_t score_bytes[3]) {
+void UISystem::render_score(const uint8_t score_bytes[3]) const {
     // Render 3 base-100 bytes as 6 decimal digits
     // Score position: X=232-280, Y=24
     // Each digit is 8 pixels wide, 16 pixels tall
@@ -305,7 +305,7 @@ void UISystem::render_score(const uint8_t score_bytes[3]) {
     }
 }
 
-void UISystem::render_lives(uint8_t num_lives) {
+void UISystem::render_lives(uint8_t num_lives) const {
     // Render life icons: bright for active lives, dark for inactive
     // Position: Y=180, X=48 + (life_count × 24) pixels
     // MAX_NUM_LIVES = 5
@@ -329,7 +329,7 @@ void UISystem::render_lives(uint8_t num_lives) {
     }
 }
 
-void UISystem::render_hp_meter(uint8_t hp) {
+void UISystem::render_hp_meter(uint8_t hp) const {
     // Render 6 HP cells
     // Position: Y=82, X=248-288 (cells at 8-pixel intervals)
     // Each cell is 8×16 pixels
@@ -355,7 +355,7 @@ void UISystem::render_hp_meter(uint8_t hp) {
     }
 }
 
-void UISystem::render_fireball_meter(uint8_t meter) {
+void UISystem::render_fireball_meter(uint8_t meter) const {
     // Render 6 cells representing 0-12 meter value (2 units per cell)
     // Position: Y=54, X=248-296 (cells at 8-pixel intervals)
     // Each cell is 8×16 pixels

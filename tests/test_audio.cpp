@@ -72,7 +72,7 @@ void test_audio_enemy_hit_interrupts_fire() {
           "audio_enemy_hit_interrupts_fire: initialization should succeed");
     check(play_game_sound(GameSound::FIRE),
           "audio_enemy_hit_interrupts_fire: fire should start playing");
-    Mix_Chunk* fire_chunk = Mix_GetChunk(0);
+    const Mix_Chunk* fire_chunk = Mix_GetChunk(0);
     check(fire_chunk != nullptr,
           "audio_enemy_hit_interrupts_fire: fire chunk should be available on the SFX channel");
     int mixer_frequency = 0;

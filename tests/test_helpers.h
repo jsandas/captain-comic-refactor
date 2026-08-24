@@ -21,7 +21,7 @@
 // Test case structure
 struct TestCase {
     std::string name;
-    void (*run)();
+    void (*run)() = nullptr;
 };
 
 // Test globals defined in test_helpers.cpp
