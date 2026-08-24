@@ -700,7 +700,7 @@ void ActorSystem::handle_single_enemy(int enemy_index) {
 /**
  * Check if enemy should despawn due to distance
  */
-void ActorSystem::check_enemy_despawn(enemy_t* enemy) const {
+void ActorSystem::check_enemy_despawn(enemy_t* enemy) {
     if (!enemy) return;
 
     int16_t x_diff = static_cast<int16_t>(static_cast<int>(enemy->x) - static_cast<int>(g_comic_x));
@@ -713,7 +713,7 @@ void ActorSystem::check_enemy_despawn(enemy_t* enemy) const {
 /**
  * Check collision between enemy and player
  */
-void ActorSystem::check_enemy_player_collision(enemy_t* enemy) const {
+void ActorSystem::check_enemy_player_collision(enemy_t* enemy) {
     if (!enemy) return;
 
     if (enemy->state != ENEMY_STATE_SPAWNED) {

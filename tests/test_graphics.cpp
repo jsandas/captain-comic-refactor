@@ -77,7 +77,7 @@ void test_animation_frames_initialize_sprite_state() {
     Animation anim = make_animation({100, 200}, true);
 
     check(!anim.frames.empty(), "animation should create frames");
-    check(anim.frames[0].sprite.texture == nullptr,
+    check(anim.frames[0].sprite.texture.texture == nullptr,
           "new animation frame sprite should start with a null texture");
     check(anim.frames[0].sprite.width == 0 && anim.frames[0].sprite.height == 0,
           "new animation frame sprite should start with zero size");
