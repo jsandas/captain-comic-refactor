@@ -16,6 +16,14 @@
  */
 class UISystem {
 public:
+    struct HUDLayout {
+        int vertical_offset;
+        int score_y;
+        int lives_y;
+        int hp_meter_y;
+        int fireball_meter_y;
+    };
+
     UISystem();
     ~UISystem();
 
@@ -43,6 +51,7 @@ public:
     static void score_bytes_to_digits(const uint8_t score_bytes[3], uint8_t digits[6]);
     static uint8_t fireball_meter_to_cell_state(uint8_t meter_value, uint8_t cell_index);
     static bool has_boots(uint8_t jump_power);
+    static HUDLayout get_hud_layout();
 
 private:
     bool initialized;
@@ -74,19 +83,19 @@ private:
     std::vector<Sprite*> gold_sprites;           // even/odd frames
 
     // Render individual UI components
-    void render_score(const uint8_t score_bytes[3]);
-    void render_lives(uint8_t num_lives);
-    void render_hp_meter(uint8_t hp);
-    void render_fireball_meter(uint8_t meter);
+    void render_score(const uint8_t score_bytes[3]) const;
+    void render_lives(uint8_t num_lives) const;
+    void render_hp_meter(uint8_t hp) const;
+    void render_fireball_meter(uint8_t meter) const;
     void render_inventory(uint8_t firepower, bool has_corkscrew, bool has_door_key,
                           bool has_teleport_wand, bool has_lantern, bool has_gems, bool has_crown,
                           bool has_gold, uint8_t jump_power);
 
     // Helper to load sprite
-    Sprite* load_ui_sprite(const std::string& sprite_name);
+    static Sprite* load_ui_sprite(const std::string& sprite_name);
 
     // Helper to render sprite at position without direction
-    void render_sprite_at(Sprite* sprite, int x, int y, int width, int height);
+    static void render_sprite_at(const Sprite* sprite, int x, int y, int width, int height);
 };
 
 #endif  // UI_SYSTEM_H

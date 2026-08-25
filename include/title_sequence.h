@@ -25,7 +25,7 @@ const InputBindings& get_input_bindings();
 /**
  * Restore default gameplay bindings.
  */
-void reset_input_bindings_to_defaults();
+[[maybe_unused]] void reset_input_bindings_to_defaults();
 
 /**
  * Replace gameplay bindings with the provided mapping.

@@ -153,9 +153,9 @@ static bool fade_in_paletted_surface(SDL_Renderer* renderer, SDL_Surface* surfac
     }
 
     // Store original palette colors for restoration.
-    SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
-                                surface->format->palette->colors[PALETTE_REG_ITEMS],
-                                surface->format->palette->colors[PALETTE_REG_TITLE]};
+    const SDL_Color orig_colors[3] = {surface->format->palette->colors[PALETTE_REG_BACKGROUND],
+                                      surface->format->palette->colors[PALETTE_REG_ITEMS],
+                                      surface->format->palette->colors[PALETTE_REG_TITLE]};
 
     // Helper: Convert 6-bit EGA color to 8-bit RGB
     auto ega_to_rgb = [](uint8_t ega_6bit) -> uint8_t { return (ega_6bit << 2) | (ega_6bit >> 4); };
@@ -744,13 +744,12 @@ static bool validate_input_bindings(const InputBindings& bindings, std::string* 
     const SDL_Keycode keys[] = {bindings.move_left, bindings.move_right, bindings.jump,
                                 bindings.fire,      bindings.open_door,  bindings.teleport};
 
-    for (const SDL_Keycode key : keys) {
-        if (key == SDLK_UNKNOWN) {
-            if (error_message) {
-                *error_message = "contains unknown keycode";
-            }
-            return false;
+    if (std::any_of(std::begin(keys), std::end(keys),
+                    [](SDL_Keycode key) { return key == SDLK_UNKNOWN; })) {
+        if (error_message) {
+            *error_message = "contains unknown keycode";
         }
+        return false;
     }
 
     constexpr size_t NUM_BINDINGS = sizeof(keys) / sizeof(keys[0]);
@@ -974,7 +973,7 @@ static std::vector<HighScoreEntry> load_high_scores() {
             const uint32_t sc = static_cast<uint32_t>(std::stoul(line.substr(0, sep)));
             std::string nm = line.substr(sep + 1);
             if (static_cast<int>(nm.size()) > MAX_NAME_LENGTH) {
-                nm = nm.substr(0, static_cast<size_t>(MAX_NAME_LENGTH));
+                nm.resize(static_cast<size_t>(MAX_NAME_LENGTH));
             }
             scores.push_back({nm, sc});
         } catch (...) {
@@ -1016,10 +1015,12 @@ static int find_insertion_rank(const std::vector<HighScoreEntry>& scores, uint32
     if (player_score == 0) {
         return MAX_HIGH_SCORES;
     }
-    for (int i = 0; i < static_cast<int>(scores.size()); ++i) {
-        if (player_score > scores[i].score) {
-            return i;
-        }
+    const auto it = std::find_if(scores.begin(), scores.end(),
+                                 [player_score](const HighScoreEntry& score_entry) {
+                                     return player_score > score_entry.score;
+                                 });
+    if (it != scores.end()) {
+        return static_cast<int>(std::distance(scores.begin(), it));
     }
     if (static_cast<int>(scores.size()) < MAX_HIGH_SCORES) {
         return static_cast<int>(scores.size());
@@ -1131,7 +1132,7 @@ static void build_high_score_text_cache(SDL_Renderer* renderer, TTF_Font* font,
             SDL_Color color = COLOR_NORMAL;
             if (i == 0) {
                 color = COLOR_TITLE;
-            } else if (!lines[i].empty() && lines[i][0] == '>') {
+            } else if (lines[i][0] == '>') {
                 color = COLOR_NEW;
             }
             SDL_Surface* surf = TTF_RenderText_Blended_Wrapped(font, lines[i].c_str(), color,
@@ -1295,7 +1296,9 @@ static NameCaptureResult capture_name_input(SDL_Renderer* renderer, SDL_Texture*
 
 const InputBindings& get_input_bindings() { return s_input_bindings; }
 
-void reset_input_bindings_to_defaults() { s_input_bindings = DEFAULT_INPUT_BINDINGS; }
+[[maybe_unused]] void reset_input_bindings_to_defaults() {
+    s_input_bindings = DEFAULT_INPUT_BINDINGS;
+}
 
 void set_input_bindings(const InputBindings& bindings) { s_input_bindings = bindings; }
 
@@ -1657,7 +1660,7 @@ bool run_title_sequence(SDL_Renderer* renderer, GraphicsSystem* graphics) {
 SDL_Texture* get_hud_texture() { return s_hud_texture; }
 
 bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
-                            const uint8_t* score_bytes_in) {
+                            const uint8_t* score_bytes) {
     // Load background texture (sys005.ega.png).
     SDL_Texture* bg_texture = nullptr;
     if (graphics) {
@@ -1678,7 +1681,7 @@ bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
     std::vector<HighScoreEntry> scores = load_high_scores();
 
     // Determine the player's score and whether it qualifies.
-    const uint32_t player_score = score_bytes_in ? score_bytes_to_uint32(score_bytes_in) : 0u;
+    const uint32_t player_score = score_bytes ? score_bytes_to_uint32(score_bytes) : 0u;
     const int rank = find_insertion_rank(scores, player_score);
     const bool qualifies = (rank < MAX_HIGH_SCORES);
 

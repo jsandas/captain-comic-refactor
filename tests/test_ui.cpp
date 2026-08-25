@@ -6,31 +6,42 @@ void test_ui_score_base100_encoding() {
     uint8_t digits[6];
 
     // Test zero score
-    uint8_t score_zero[3] = {0, 0, 0};
+    const uint8_t score_zero[3] = {0, 0, 0};
     UISystem::score_bytes_to_digits(score_zero, digits);
     check(digits[0] == 0 && digits[1] == 0 && digits[2] == 0 && digits[3] == 0 && digits[4] == 0 &&
               digits[5] == 0,
           "ui_score: zero should convert to all 0 digits");
 
     // Test score 99 (99, 0, 0)
-    uint8_t score_99[3] = {99, 0, 0};
+    const uint8_t score_99[3] = {99, 0, 0};
     UISystem::score_bytes_to_digits(score_99, digits);
     check(digits[4] == 9 && digits[5] == 9,
           "ui_score: score 99 should have rightmost digits as 9,9");
 
     // Test score 123,456 = (56, 34, 12)
-    uint8_t score_123456[3] = {56, 34, 12};
+    const uint8_t score_123456[3] = {56, 34, 12};
     UISystem::score_bytes_to_digits(score_123456, digits);
     check(digits[0] == 1 && digits[1] == 2 && digits[2] == 3 && digits[3] == 4 && digits[4] == 5 &&
               digits[5] == 6,
           "ui_score: 123456 should convert to digits 1,2,3,4,5,6");
 
     // Test max score 999,999 = (99, 99, 99)
-    uint8_t score_max[3] = {99, 99, 99};
+    const uint8_t score_max[3] = {99, 99, 99};
     UISystem::score_bytes_to_digits(score_max, digits);
     check(digits[0] == 9 && digits[1] == 9 && digits[2] == 9 && digits[3] == 9 && digits[4] == 9 &&
               digits[5] == 9,
           "ui_score: max score should convert to all 9 digits");
+}
+
+void test_hud_layout_positions() {
+    reset_physics_state();
+    const UISystem::HUDLayout layout = UISystem::get_hud_layout();
+
+    check(layout.vertical_offset == 20, "hud_layout: vertical offset should remain 20");
+    check(layout.score_y == 4, "hud_layout: score Y should be 4");
+    check(layout.lives_y == 160, "hud_layout: lives Y should be 160");
+    check(layout.hp_meter_y == 62, "hud_layout: HP meter Y should be 62");
+    check(layout.fireball_meter_y == 34, "hud_layout: fireball meter Y should be 34");
 }
 
 void test_ui_fireball_meter_cell_mapping() {
@@ -90,7 +101,7 @@ void test_ui_score_edge_cases() {
     uint8_t digits[6];
 
     // Test single digit in each position
-    uint8_t score_1[3] = {1, 0, 0};
+    const uint8_t score_1[3] = {1, 0, 0};
     UISystem::score_bytes_to_digits(score_1, digits);
     check(digits[5] == 1, "ui_score_edge: score 1 should have rightmost digit as 1");
 

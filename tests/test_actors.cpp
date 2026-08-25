@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <vector>
 
 #include "test_cases.h"
@@ -20,7 +21,7 @@ static void setup_test_enemy(std::vector<enemy_t>& enemies, int index, uint8_t b
     enemy.animation_data = nullptr;     // Tests don't need actual sprite data
 }
 
-static void reset_actor_state(ActorSystem& actor_system) {
+static void reset_actor_state(const ActorSystem& actor_system) {
     auto& enemies = const_cast<std::vector<enemy_t>&>(actor_system.get_enemies());
     for (auto& enemy : enemies) {
         enemy.state = ENEMY_STATE_DESPAWNED;
@@ -55,10 +56,10 @@ void test_actor_spawn_one_per_tick() {
     // First update - should spawn exactly 1 enemy
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x);
 
-    int spawned = 0;
-    for (const auto& enemy : enemies) {
-        if (enemy.state == ENEMY_STATE_SPAWNED) spawned++;
-    }
+    const int spawned =
+        static_cast<int>(std::count_if(enemies.begin(), enemies.end(), [](const enemy_t& enemy) {
+            return enemy.state == ENEMY_STATE_SPAWNED;
+        }));
     check(spawned == 1, "actor_spawn: should spawn exactly 1 enemy per tick");
 }
 
@@ -93,13 +94,10 @@ void test_actor_spawn_offset_cycling() {
 
     // Verify spawn positions vary (offset cycling working)
     check(spawn_positions.size() >= 3, "actor_spawn_offset: should spawn multiple times");
-    bool has_variation = false;
-    for (size_t i = 1; i < spawn_positions.size(); i++) {
-        if (spawn_positions[i] != spawn_positions[0]) {
-            has_variation = true;
-            break;
-        }
-    }
+    const bool has_variation = std::any_of(spawn_positions.begin() + 1, spawn_positions.end(),
+                                           [first_position = spawn_positions[0]](uint8_t position) {
+                                               return position != first_position;
+                                           });
     check(has_variation, "actor_spawn_offset: spawn positions should vary due to offset cycling");
 }
 

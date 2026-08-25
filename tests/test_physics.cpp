@@ -218,7 +218,7 @@ void test_teleport_does_not_update_respawn_checkpoint() {
 void test_door_activation_alignment_x() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 1, 1);
+    const level_t* level = create_test_level_with_door(10, 8, 1, 1);
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;
@@ -283,7 +283,7 @@ void test_door_activation_alignment_x() {
 void test_door_activation_alignment_y() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 1, 1);
+    const level_t* level = create_test_level_with_door(10, 8, 1, 1);
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;
@@ -324,7 +324,7 @@ void test_door_activation_alignment_y() {
 void test_door_key_requirement() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 1, 1);
+    const level_t* level = create_test_level_with_door(10, 8, 1, 1);
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;
@@ -353,7 +353,7 @@ void test_door_key_requirement() {
 void test_door_open_key_requirement() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 1, 1);
+    const level_t* level = create_test_level_with_door(10, 8, 1, 1);
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;
@@ -382,7 +382,7 @@ void test_door_open_key_requirement() {
 void test_door_state_update_same_level() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 1, 1);  // Target same level, stage 1
+    const level_t* level = create_test_level_with_door(10, 8, 1, 1);  // Target same level, stage 1
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;
@@ -410,7 +410,7 @@ void test_door_state_update_same_level() {
 void test_door_state_update_different_level() {
     reset_physics_state();
     reset_door_state();
-    level_t* level = create_test_level_with_door(10, 8, 2, 1);  // Target different level
+    const level_t* level = create_test_level_with_door(10, 8, 2, 1);  // Target different level
     current_level_ptr = level;
     current_level_number = 1;
     current_stage_number = 0;

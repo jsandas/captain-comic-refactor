@@ -14,29 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
-      # - name: Run cppcheck
-      #   run: |
-      #     docker run --rm -v ${{ github.workspace }}:/workspace \
-      #     --workdir /workspace \
-      #     alpine:edge \
-      #     sh -c "apk add --no-cache cppcheck; \
-      #     cppcheck --enable=all \
-      #       --inconclusive \
-      #       --suppress=missingIncludeSystem \
-      #       --error-exitcode=1 \
-      #       --inline-suppr \
-      #       --check-level=exhaustive \
-      #       -I include \
-      #       src tests"
+      - name: Run cppcheck
+        run: |
+          docker run --rm -v ${{ github.workspace }}:/workspace \
+          --workdir /workspace \
+          alpine:edge \
+          sh -c "apk add --no-cache cppcheck; \
+          cppcheck --enable=all \
+            --inconclusive \
+            --suppress=missingIncludeSystem \
+            --error-exitcode=1 \
+            --inline-suppr \
+            --check-level=exhaustive \
+            -I include \
+            src tests"
 
   clang-format:
     name: Format Check (clang-format)
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
       - name: Install clang-format
         run: sudo apt-get update && sudo apt-get install -y clang-format
@@ -53,7 +53,7 @@ jobs:
   #   runs-on: ubuntu-latest
     
   #   steps:
-  #     - uses: actions/checkout@v7.0.1
+  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       
   #     - name: Install dependencies
   #       run: sudo apt-get update && sudo apt-get install -y cmake g++ libsdl2-dev

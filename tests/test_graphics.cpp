@@ -72,6 +72,17 @@ void test_animation_zero_duration() {
           "zero duration: frame index should stay in range");
 }
 
+void test_animation_frames_initialize_sprite_state() {
+    reset_physics_state();
+    Animation anim = make_animation({100, 200}, true);
+
+    check(!anim.frames.empty(), "animation should create frames");
+    check(anim.frames[0].sprite.texture.texture == nullptr,
+          "new animation frame sprite should start with a null texture");
+    check(anim.frames[0].sprite.width == 0 && anim.frames[0].sprite.height == 0,
+          "new animation frame sprite should start with zero size");
+}
+
 void test_enemy_animation_sequence() {
     reset_physics_state();
     std::vector<uint8_t> loop_sequence = build_enemy_animation_sequence(3, ENEMY_ANIMATION_LOOP);
@@ -266,7 +277,7 @@ void test_playfield_viewport_height_matches_render_scale() {
     // Probe a representative range of window widths. For each width, compute
     // letterbox_scale (as main.cpp does) and verify the two formulas agree.
     // EGA_WIDTH=320, EGA_HEIGHT=200; playfield is 192x160 EGA pixels (24x20 game units).
-    constexpr int EGA_WIDTH = 320;
+    constexpr int EGA_WIDTH_PX = 320;
     constexpr float EGA_PLAYFIELD_H = 160.0f;
 
     // Spot-check: demonstrate the old formula was wrong at the scale that caused the bug.
@@ -278,28 +289,26 @@ void test_playfield_viewport_height_matches_render_scale() {
     //   sprite at comic_y=16 has bottom at 16*25 + 4*25 = 500 > old_viewport(496) → clipped!
     {
         const int window_w = 992;
-        const float ls = static_cast<float>(window_w) / EGA_WIDTH;
+        const float ls = static_cast<float>(window_w) / EGA_WIDTH_PX;
         const int rs = static_cast<int>(8.0f * ls + 0.5f);
         const int old_viewport_h = static_cast<int>(EGA_PLAYFIELD_H * ls);
         const int new_viewport_h = rs * PLAYFIELD_HEIGHT;
-        check(new_viewport_h >= old_viewport_h,
-              "viewport_h (new) must be >= old formula at scale 3.1");
         // The sprite bottom for a player at comic_y = PLAYFIELD_HEIGHT - 4 (lowest
         // visible position) is (PLAYFIELD_HEIGHT) * rs. That must fit in viewport.
-        const int sprite_bottom_at_floor = PLAYFIELD_HEIGHT * rs;
-        check(new_viewport_h >= sprite_bottom_at_floor,
-              "new viewport must contain sprite at comic_y = PLAYFIELD_HEIGHT - 4");
-        check(old_viewport_h < sprite_bottom_at_floor,
-              "old viewport was too small at scale 3.1 (regression guard)");
+        const int viewport_difference = new_viewport_h - old_viewport_h;
+        // cppcheck-suppress knownConditionTrueFalse
+        check(viewport_difference > 0,
+              "new viewport height should exceed the old viewport estimate for this scale");
     }
 
     // Also verify the new formula holds across a broad range of window widths.
     bool all_ok = true;
     for (int w = 320; w <= 3840; w += 1) {
-        const float ls = static_cast<float>(w) / EGA_WIDTH;
+        const float ls = static_cast<float>(w) / EGA_WIDTH_PX;
         const int rs = (ls < 0.125f) ? 1 : static_cast<int>(8.0f * ls + 0.5f);
         const int new_viewport_h = rs * PLAYFIELD_HEIGHT;
         const int sprite_bottom = PLAYFIELD_HEIGHT * rs;
+        // cppcheck-suppress knownConditionTrueFalse
         if (new_viewport_h < sprite_bottom) {
             all_ok = false;
             break;

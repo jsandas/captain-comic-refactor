@@ -14,6 +14,16 @@ UISystem::UISystem()
 
 UISystem::~UISystem() { cleanup(); }
 
+UISystem::HUDLayout UISystem::get_hud_layout() {
+    HUDLayout layout{};
+    layout.vertical_offset = 20;
+    layout.score_y = 24 - layout.vertical_offset;
+    layout.lives_y = 180 - layout.vertical_offset;
+    layout.hp_meter_y = 82 - layout.vertical_offset;
+    layout.fireball_meter_y = 54 - layout.vertical_offset;
+    return layout;
+}
+
 bool UISystem::initialize() {
     if (initialized) {
         return true;
@@ -259,7 +269,7 @@ Sprite* UISystem::load_ui_sprite(const std::string& sprite_name) {
     return g_graphics->get_sprite(sprite_name, "");
 }
 
-void UISystem::render_sprite_at(Sprite* sprite, int x, int y, int width, int height) {
+void UISystem::render_sprite_at(const Sprite* sprite, int x, int y, int width, int height) {
     if (!g_graphics || !sprite) return;
     g_graphics->render_sprite_scaled(x, y, *sprite, width, height, false);
 }
@@ -276,10 +286,13 @@ void UISystem::render_hud(const uint8_t score_bytes[3], uint8_t num_lives, uint8
                      has_gems, has_crown, has_gold, jump_power);
 }
 
-void UISystem::render_score(const uint8_t score_bytes[3]) {
+void UISystem::render_score(const uint8_t score_bytes[3]) const {
     // Render 3 base-100 bytes as 6 decimal digits
     // Score position: X=232-280, Y=24
     // Each digit is 8 pixels wide, 16 pixels tall
+
+    const HUDLayout layout = get_hud_layout();
+    const int SCORE_Y = layout.score_y;
 
     if (score_digit_sprites.empty()) return;
 
@@ -295,17 +308,17 @@ void UISystem::render_score(const uint8_t score_bytes[3]) {
 
         // Render high digit first at base_x
         if (high_decimal < score_digit_sprites.size()) {
-            render_sprite_at(score_digit_sprites[high_decimal], base_x, 24, 8, 16);
+            render_sprite_at(score_digit_sprites[high_decimal], base_x, SCORE_Y, 8, 16);
         }
 
         // Render low digit at base_x + 8
         if (low_decimal < score_digit_sprites.size()) {
-            render_sprite_at(score_digit_sprites[low_decimal], base_x + 8, 24, 8, 16);
+            render_sprite_at(score_digit_sprites[low_decimal], base_x + 8, SCORE_Y, 8, 16);
         }
     }
 }
 
-void UISystem::render_lives(uint8_t num_lives) {
+void UISystem::render_lives(uint8_t num_lives) const {
     // Render life icons: bright for active lives, dark for inactive
     // Position: Y=180, X=48 + (life_count × 24) pixels
     // MAX_NUM_LIVES = 5
@@ -315,7 +328,8 @@ void UISystem::render_lives(uint8_t num_lives) {
     constexpr uint8_t MAX_NUM_LIVES = 5;
     constexpr int START_X = 48;
     constexpr int LIFE_SPACING = 24;
-    constexpr int LIVES_Y = 180;
+    const HUDLayout layout = get_hud_layout();
+    const int LIVES_Y = layout.lives_y;
 
     for (uint8_t life = 0; life < MAX_NUM_LIVES; life++) {
         int x = START_X + (life * LIFE_SPACING);
@@ -329,7 +343,7 @@ void UISystem::render_lives(uint8_t num_lives) {
     }
 }
 
-void UISystem::render_hp_meter(uint8_t hp) {
+void UISystem::render_hp_meter(uint8_t hp) const {
     // Render 6 HP cells
     // Position: Y=82, X=248-288 (cells at 8-pixel intervals)
     // Each cell is 8×16 pixels
@@ -337,7 +351,8 @@ void UISystem::render_hp_meter(uint8_t hp) {
     // hp range: 0-6 (MAX_HP = 6)
 
     if (!meter_full || !meter_empty) return;
-    constexpr int METER_Y = 82;
+    const HUDLayout layout = get_hud_layout();
+    const int METER_Y = layout.hp_meter_y;
     constexpr int CELL_WIDTH = 8;
     constexpr uint8_t MAX_CELLS = 6;
     constexpr int HUD_METER_RIGHT_EDGE_X = 296;
@@ -355,7 +370,7 @@ void UISystem::render_hp_meter(uint8_t hp) {
     }
 }
 
-void UISystem::render_fireball_meter(uint8_t meter) {
+void UISystem::render_fireball_meter(uint8_t meter) const {
     // Render 6 cells representing 0-12 meter value (2 units per cell)
     // Position: Y=54, X=248-296 (cells at 8-pixel intervals)
     // Each cell is 8×16 pixels
@@ -364,7 +379,8 @@ void UISystem::render_fireball_meter(uint8_t meter) {
 
     if (!meter_full || !meter_half || !meter_empty) return;
 
-    constexpr int METER_Y = 54;
+    const HUDLayout layout = get_hud_layout();
+    const int METER_Y = layout.fireball_meter_y;
     constexpr int CELL_WIDTH = 8;
     constexpr uint8_t MAX_CELLS = 6;
     constexpr int HUD_METER_RIGHT_EDGE_X = 296;

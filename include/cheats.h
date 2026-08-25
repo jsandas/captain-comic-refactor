@@ -25,17 +25,19 @@ public:
     void process_input(SDL_Keycode key);
 
     // State queries
-    bool is_debug_enabled() const { return debug_enabled; }
-    bool is_noclip_active() const { return noclip_active; }
-    bool should_show_debug_overlay() const { return debug_overlay_active; }
-    bool is_awaiting_level_input() const { return awaiting_level_input; }
-    bool is_awaiting_stage_input() const { return awaiting_stage_input; }
-    bool is_awaiting_position_input() const { return awaiting_x_input || awaiting_y_input; }
-    bool is_awaiting_item_input() const { return awaiting_item_input; }
+    [[maybe_unused]] bool is_debug_enabled() const { return debug_enabled; }
+    [[maybe_unused]] bool is_noclip_active() const { return noclip_active; }
+    [[maybe_unused]] bool should_show_debug_overlay() const { return debug_overlay_active; }
+    [[maybe_unused]] bool is_awaiting_level_input() const { return awaiting_level_input; }
+    [[maybe_unused]] bool is_awaiting_stage_input() const { return awaiting_stage_input; }
+    [[maybe_unused]] bool is_awaiting_position_input() const {
+        return awaiting_x_input || awaiting_y_input;
+    }
+    [[maybe_unused]] bool is_awaiting_item_input() const { return awaiting_item_input; }
 
     // Get current position input buffer for display
-    std::string get_position_input_buffer() const;
-    std::string get_level_warp_prompt() const;
+    [[maybe_unused]] const std::string& get_position_input_buffer() const;
+    [[maybe_unused]] std::string get_level_warp_prompt() const;
 
 private:
     void cleanup();
