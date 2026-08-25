@@ -1,5 +1,6 @@
 #include "actors.h"
 
+#include <algorithm>
 #include <iostream>
 
 #include "audio.h"
@@ -129,9 +130,7 @@ ActorSystem::ActorSystem()
     fireball_sprite[0] = nullptr;
     fireball_sprite[1] = nullptr;
     for (auto& spark_set : spark_sprites) {
-        for (auto& spark_frame : spark_set) {
-            spark_frame = nullptr;
-        }
+        std::fill(std::begin(spark_set), std::end(spark_set), nullptr);
     }
     for (auto& fb : fireballs) {
         fb.x = FIREBALL_DEAD;
@@ -700,6 +699,7 @@ void ActorSystem::handle_single_enemy(int enemy_index) {
 /**
  * Check if enemy should despawn due to distance
  */
+// cppcheck-suppress functionConst
 void ActorSystem::check_enemy_despawn(enemy_t* enemy) {
     if (!enemy) return;
 
@@ -713,6 +713,7 @@ void ActorSystem::check_enemy_despawn(enemy_t* enemy) {
 /**
  * Check collision between enemy and player
  */
+// cppcheck-suppress functionConst
 void ActorSystem::check_enemy_player_collision(enemy_t* enemy) {
     if (!enemy) return;
 

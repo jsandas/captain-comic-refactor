@@ -295,10 +295,10 @@ void test_playfield_viewport_height_matches_render_scale() {
         const int new_viewport_h = rs * PLAYFIELD_HEIGHT;
         // The sprite bottom for a player at comic_y = PLAYFIELD_HEIGHT - 4 (lowest
         // visible position) is (PLAYFIELD_HEIGHT) * rs. That must fit in viewport.
-        const int sprite_bottom_at_floor = PLAYFIELD_HEIGHT * rs;
         const int viewport_difference = new_viewport_h - old_viewport_h;
+        // cppcheck-suppress knownConditionTrueFalse
         check(viewport_difference > 0,
-              "new viewport height should exceed the old viewport estimate at scale 3.1");
+              "new viewport height should exceed the old viewport estimate for this scale");
     }
 
     // Also verify the new formula holds across a broad range of window widths.
@@ -308,6 +308,7 @@ void test_playfield_viewport_height_matches_render_scale() {
         const int rs = (ls < 0.125f) ? 1 : static_cast<int>(8.0f * ls + 0.5f);
         const int new_viewport_h = rs * PLAYFIELD_HEIGHT;
         const int sprite_bottom = PLAYFIELD_HEIGHT * rs;
+        // cppcheck-suppress knownConditionTrueFalse
         if (new_viewport_h < sprite_bottom) {
             all_ok = false;
             break;

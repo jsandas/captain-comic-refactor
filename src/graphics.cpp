@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <unordered_set>
 
@@ -547,10 +548,10 @@ void GraphicsSystem::update_animation(Animation& anim, uint32_t current_time) {
         return;
     }
 
-    int total_duration = 0;
-    for (const auto& frame : anim.frames) {
-        total_duration += frame.duration_ms > 0 ? frame.duration_ms : 1;
-    }
+    const int total_duration = std::accumulate(
+        anim.frames.begin(), anim.frames.end(), 0, [](int total, const AnimationFrame& frame) {
+            return total + (frame.duration_ms > 0 ? frame.duration_ms : 1);
+        });
 
     if (total_duration <= 0) {
         anim.current_frame = 0;

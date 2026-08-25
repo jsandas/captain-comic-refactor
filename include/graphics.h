@@ -104,8 +104,8 @@ public:
     void render_sprite(int screen_x, int screen_y, const Sprite& sprite, bool flip_h = false);
     void render_sprite_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                               int height, bool flip_h = false);
-    void render_sprite_centered(int screen_x, int screen_y, const Sprite& sprite,
-                                bool flip_h = false);
+    [[maybe_unused]] void render_sprite_centered(int screen_x, int screen_y, const Sprite& sprite,
+                                                 bool flip_h = false);
     void render_sprite_centered_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                                        int height, bool flip_h = false);
     // Render a sprite cropped to its top `clip_height` screen-pixels, anchored so the

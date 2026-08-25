@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 namespace {
@@ -386,11 +387,10 @@ static const std::vector<FrequencyNote>* get_music_sequence(GameMusic music) {
  * Calculate total duration for a sound sequence in milliseconds
  */
 static uint16_t calculate_sequence_duration_ms(const std::vector<FrequencyNote>& sequence) {
-    uint16_t total_ms = 0;
-    for (const auto& note : sequence) {
-        total_ms += ticks_to_ms(note.duration_ticks);
-    }
-    return total_ms;
+    return static_cast<uint16_t>(std::accumulate(
+        sequence.begin(), sequence.end(), 0u, [](uint32_t total_ms, const FrequencyNote& note) {
+            return total_ms + ticks_to_ms(note.duration_ticks);
+        }));
 }
 
 static void cleanup_audio_init_failure(bool mixer_opened) {
@@ -634,7 +634,7 @@ bool is_game_music_playing() {
     return g_current_music != GameMusic::NONE && Mix_Playing(g_music_channel) != 0;
 }
 
-GameMusic get_current_music() { return g_current_music; }
+[[maybe_unused]] GameMusic get_current_music() { return g_current_music; }
 
 #else
 
@@ -658,5 +658,5 @@ void stop_game_music() {}
 
 bool is_game_music_playing() { return false; }
 
-GameMusic get_current_music() { return GameMusic::NONE; }
+[[maybe_unused]] GameMusic get_current_music() { return GameMusic::NONE; }
 #endif

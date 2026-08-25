@@ -100,6 +100,6 @@ bool is_game_music_playing();
  *
  * @return The currently playing music track, or GameMusic::NONE if no music is playing
  */
-GameMusic get_current_music();
+[[maybe_unused]] GameMusic get_current_music();
 
 #endif  // AUDIO_H

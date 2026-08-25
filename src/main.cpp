@@ -389,11 +389,13 @@ int main(int argc, const char* argv[]) {
     const char* directions[] = {"right", "left"};
 
     for (const char* sprite : sprite_names) {
-        for (const char* dir : directions) {
-            if (!g_graphics->load_sprite(sprite, dir)) {
-                std::cerr << "Failed to load sprite: " << sprite << " (" << dir << ")" << std::endl;
-                return cleanup_and_exit(1);
-            }
+        const auto missing_dir =
+            std::find_if(std::begin(directions), std::end(directions),
+                         [&](const char* dir) { return !g_graphics->load_sprite(sprite, dir); });
+        if (missing_dir != std::end(directions)) {
+            std::cerr << "Failed to load sprite: " << sprite << " (" << *missing_dir << ")"
+                      << std::endl;
+            return cleanup_and_exit(1);
         }
     }
 
@@ -730,10 +732,6 @@ int main(int argc, const char* argv[]) {
                 if (!wait_animation_ticks(1)) {
                     break;
                 }
-            }
-
-            if (quit) {
-                break;
             }
 
             comic_num_lives--;

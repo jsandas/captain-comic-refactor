@@ -744,13 +744,12 @@ static bool validate_input_bindings(const InputBindings& bindings, std::string* 
     const SDL_Keycode keys[] = {bindings.move_left, bindings.move_right, bindings.jump,
                                 bindings.fire,      bindings.open_door,  bindings.teleport};
 
-    for (const SDL_Keycode key : keys) {
-        if (key == SDLK_UNKNOWN) {
-            if (error_message) {
-                *error_message = "contains unknown keycode";
-            }
-            return false;
+    if (std::any_of(std::begin(keys), std::end(keys),
+                    [](SDL_Keycode key) { return key == SDLK_UNKNOWN; })) {
+        if (error_message) {
+            *error_message = "contains unknown keycode";
         }
+        return false;
     }
 
     constexpr size_t NUM_BINDINGS = sizeof(keys) / sizeof(keys[0]);
@@ -1016,10 +1015,12 @@ static int find_insertion_rank(const std::vector<HighScoreEntry>& scores, uint32
     if (player_score == 0) {
         return MAX_HIGH_SCORES;
     }
-    for (int i = 0; i < static_cast<int>(scores.size()); ++i) {
-        if (player_score > scores[i].score) {
-            return i;
-        }
+    const auto it = std::find_if(scores.begin(), scores.end(),
+                                 [player_score](const HighScoreEntry& score_entry) {
+                                     return player_score > score_entry.score;
+                                 });
+    if (it != scores.end()) {
+        return static_cast<int>(std::distance(scores.begin(), it));
     }
     if (static_cast<int>(scores.size()) < MAX_HIGH_SCORES) {
         return static_cast<int>(scores.size());
@@ -1295,7 +1296,9 @@ static NameCaptureResult capture_name_input(SDL_Renderer* renderer, SDL_Texture*
 
 const InputBindings& get_input_bindings() { return s_input_bindings; }
 
-void reset_input_bindings_to_defaults() { s_input_bindings = DEFAULT_INPUT_BINDINGS; }
+[[maybe_unused]] void reset_input_bindings_to_defaults() {
+    s_input_bindings = DEFAULT_INPUT_BINDINGS;
+}
 
 void set_input_bindings(const InputBindings& bindings) { s_input_bindings = bindings; }
 
