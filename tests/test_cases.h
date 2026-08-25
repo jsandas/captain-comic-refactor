@@ -80,6 +80,7 @@ void test_ui_fireball_meter_cell_mapping();
 void test_ui_boots_detection();
 void test_ui_score_edge_cases();
 void test_ui_meter_all_states();
+void test_hud_layout_positions();
 void test_award_points_no_carry();
 void test_award_points_accumulates_in_byte0();
 void test_award_points_carry_into_byte1();

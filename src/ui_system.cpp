@@ -14,6 +14,16 @@ UISystem::UISystem()
 
 UISystem::~UISystem() { cleanup(); }
 
+UISystem::HUDLayout UISystem::get_hud_layout() {
+    HUDLayout layout{};
+    layout.vertical_offset = 20;
+    layout.score_y = 24 - layout.vertical_offset;
+    layout.lives_y = 180 - layout.vertical_offset;
+    layout.hp_meter_y = 82 - layout.vertical_offset;
+    layout.fireball_meter_y = 54 - layout.vertical_offset;
+    return layout;
+}
+
 bool UISystem::initialize() {
     if (initialized) {
         return true;
@@ -281,8 +291,8 @@ void UISystem::render_score(const uint8_t score_bytes[3]) const {
     // Score position: X=232-280, Y=24
     // Each digit is 8 pixels wide, 16 pixels tall
 
-    constexpr int HUD_VERTICAL_OFFSET = 20;
-    constexpr int SCORE_Y = 24 - HUD_VERTICAL_OFFSET;
+    const HUDLayout layout = get_hud_layout();
+    const int SCORE_Y = layout.score_y;
 
     if (score_digit_sprites.empty()) return;
 
@@ -318,8 +328,8 @@ void UISystem::render_lives(uint8_t num_lives) const {
     constexpr uint8_t MAX_NUM_LIVES = 5;
     constexpr int START_X = 48;
     constexpr int LIFE_SPACING = 24;
-    constexpr int HUD_VERTICAL_OFFSET = 20;
-    constexpr int LIVES_Y = 180 - HUD_VERTICAL_OFFSET;
+    const HUDLayout layout = get_hud_layout();
+    const int LIVES_Y = layout.lives_y;
 
     for (uint8_t life = 0; life < MAX_NUM_LIVES; life++) {
         int x = START_X + (life * LIFE_SPACING);
@@ -341,8 +351,8 @@ void UISystem::render_hp_meter(uint8_t hp) const {
     // hp range: 0-6 (MAX_HP = 6)
 
     if (!meter_full || !meter_empty) return;
-    constexpr int HUD_VERTICAL_OFFSET = 20;
-    constexpr int METER_Y = 82 - HUD_VERTICAL_OFFSET;
+    const HUDLayout layout = get_hud_layout();
+    const int METER_Y = layout.hp_meter_y;
     constexpr int CELL_WIDTH = 8;
     constexpr uint8_t MAX_CELLS = 6;
     constexpr int HUD_METER_RIGHT_EDGE_X = 296;
@@ -369,8 +379,8 @@ void UISystem::render_fireball_meter(uint8_t meter) const {
 
     if (!meter_full || !meter_half || !meter_empty) return;
 
-    constexpr int HUD_VERTICAL_OFFSET = 20;
-    constexpr int METER_Y = 54 - HUD_VERTICAL_OFFSET;
+    const HUDLayout layout = get_hud_layout();
+    const int METER_Y = layout.fireball_meter_y;
     constexpr int CELL_WIDTH = 8;
     constexpr uint8_t MAX_CELLS = 6;
     constexpr int HUD_METER_RIGHT_EDGE_X = 296;

@@ -33,6 +33,17 @@ void test_ui_score_base100_encoding() {
           "ui_score: max score should convert to all 9 digits");
 }
 
+void test_hud_layout_positions() {
+    reset_physics_state();
+    const UISystem::HUDLayout layout = UISystem::get_hud_layout();
+
+    check(layout.vertical_offset == 20, "hud_layout: vertical offset should remain 20");
+    check(layout.score_y == 4, "hud_layout: score Y should be 4");
+    check(layout.lives_y == 160, "hud_layout: lives Y should be 160");
+    check(layout.hp_meter_y == 62, "hud_layout: HP meter Y should be 62");
+    check(layout.fireball_meter_y == 34, "hud_layout: fireball meter Y should be 34");
+}
+
 void test_ui_fireball_meter_cell_mapping() {
     reset_physics_state();
     // Test empty meter (0)

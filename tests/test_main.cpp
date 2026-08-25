@@ -93,6 +93,7 @@ static const std::vector<TestCase>& test_registry() {
         {"ui_boots_detection", test_ui_boots_detection},
         {"ui_score_edge_cases", test_ui_score_edge_cases},
         {"ui_meter_all_states", test_ui_meter_all_states},
+        {"hud_layout_positions", test_hud_layout_positions},
         {"award_points_no_carry", test_award_points_no_carry},
         {"award_points_accumulates_in_byte0", test_award_points_accumulates_in_byte0},
         {"award_points_carry_into_byte1", test_award_points_carry_into_byte1},

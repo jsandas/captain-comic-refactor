@@ -16,6 +16,14 @@
  */
 class UISystem {
 public:
+    struct HUDLayout {
+        int vertical_offset;
+        int score_y;
+        int lives_y;
+        int hp_meter_y;
+        int fireball_meter_y;
+    };
+
     UISystem();
     ~UISystem();
 
@@ -43,6 +51,7 @@ public:
     static void score_bytes_to_digits(const uint8_t score_bytes[3], uint8_t digits[6]);
     static uint8_t fireball_meter_to_cell_state(uint8_t meter_value, uint8_t cell_index);
     static bool has_boots(uint8_t jump_power);
+    static HUDLayout get_hud_layout();
 
 private:
     bool initialized;
