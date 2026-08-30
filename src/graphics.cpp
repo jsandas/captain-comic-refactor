@@ -656,6 +656,85 @@ void GraphicsSystem::render_sprite_top_clip_scaled(int screen_x, int screen_y, c
     SDL_RenderCopyEx(renderer, sprite.texture.texture, &src_rect, &dst_rect, 0, nullptr, flip);
 }
 
+// =============================================================================
+// Enhanced Smooth Renderer — floating-point primitives
+// These use SDL_FRect / SDL_RenderCopyF so the GPU receives sub-pixel
+// destination coordinates.  The game logic continues to operate in integer
+// game-units; the fractional camera offset is computed in main.cpp and passed
+// in as float screen_x / screen_y values.
+// =============================================================================
+
+void GraphicsSystem::render_tile_f(float screen_x, float screen_y, Tileset* tileset,
+                                   uint8_t tile_id, float scale) {
+    if (tileset == nullptr) return;
+
+    auto it = tileset->tiles.find(tile_id);
+    if (it == tileset->tiles.end()) return;
+
+    const TextureInfo& texture = it->second;
+    const float pixel_size = scale * 2.0f;  // 2 game units per tile
+    SDL_FRect dst_rect = {screen_x, screen_y, pixel_size, pixel_size};
+    SDL_RenderCopyF(renderer, texture.texture, nullptr, &dst_rect);
+}
+
+void GraphicsSystem::render_sprite_scaled_f(float screen_x, float screen_y, const Sprite& sprite,
+                                            float width, float height, bool flip_h) {
+    SDL_FRect dst_rect = {screen_x, screen_y, width, height};
+    SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+    SDL_RenderCopyExF(renderer, sprite.texture.texture, nullptr, &dst_rect, 0.0, nullptr, flip);
+}
+
+void GraphicsSystem::render_sprite_centered_scaled_f(float screen_x, float screen_y,
+                                                     const Sprite& sprite, float width,
+                                                     float height, bool flip_h) {
+    const float x = screen_x - width * 0.5f;
+    const float y = screen_y - height * 0.5f;
+    render_sprite_scaled_f(x, y, sprite, width, height, flip_h);
+}
+
+void GraphicsSystem::render_sprite_top_clip_scaled_f(float screen_x, float screen_y,
+                                                     const Sprite& sprite, float width,
+                                                     float full_height, float clip_height,
+                                                     bool flip_h) {
+    if (clip_height <= 0.0f || full_height <= 0.0f || sprite.texture.texture == nullptr) {
+        return;
+    }
+
+    const float clamped_clip_height = std::min(clip_height, full_height);
+
+    const float dest_x = screen_x - width * 0.5f;
+    const float dest_y = screen_y - full_height * 0.5f;
+
+    int tex_w = 0;
+    int tex_h = 0;
+    SDL_QueryTexture(sprite.texture.texture, nullptr, nullptr, &tex_w, &tex_h);
+    if (tex_w <= 0 || tex_h <= 0) {
+        return;
+    }
+
+    int src_h = static_cast<int>(static_cast<float>(tex_h) * clamped_clip_height / full_height);
+    if (src_h <= 0) return;
+    if (src_h > tex_h) src_h = tex_h;
+
+    SDL_Rect src_rect = {0, 0, tex_w, src_h};
+    SDL_FRect dst_rect = {dest_x, dest_y, width, clamped_clip_height};
+    SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
+    SDL_RenderCopyExF(renderer, sprite.texture.texture, &src_rect, &dst_rect, 0.0, nullptr, flip);
+}
+
+// =============================================================================
+// Render mode toggle
+// =============================================================================
+
+void GraphicsSystem::toggle_render_mode() {
+    current_render_mode = (current_render_mode == RenderMode::Classic) ? RenderMode::EnhancedSmooth
+                                                                       : RenderMode::Classic;
+}
+
+const char* GraphicsSystem::render_mode_name() const {
+    return (current_render_mode == RenderMode::EnhancedSmooth) ? "Enhanced Smooth" : "Classic";
+}
+
 void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& text,
                                  SDL_Color color) {
     if (debug_font == nullptr) {

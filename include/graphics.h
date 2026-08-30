@@ -115,6 +115,33 @@ public:
     void render_sprite_top_clip_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                                        int full_height, int clip_height, bool flip_h = false);
 
+    // -----------------------------------------------------------------
+    // Enhanced Smooth Renderer: floating-point variants
+    // These are used when render_mode == RenderMode::EnhancedSmooth and
+    // allow sub-pixel camera and sprite positioning via SDL_FRect /
+    // SDL_RenderCopyF, eliminating the tile-snapping jitter of the
+    // classic integer renderer.
+    // -----------------------------------------------------------------
+    void render_tile_f(float screen_x, float screen_y, Tileset* tileset, uint8_t tile_id,
+                       float scale);
+    void render_sprite_scaled_f(float screen_x, float screen_y, const Sprite& sprite, float width,
+                                float height, bool flip_h = false);
+    void render_sprite_centered_scaled_f(float screen_x, float screen_y, const Sprite& sprite,
+                                         float width, float height, bool flip_h = false);
+    void render_sprite_top_clip_scaled_f(float screen_x, float screen_y, const Sprite& sprite,
+                                         float width, float full_height, float clip_height,
+                                         bool flip_h = false);
+
+    // -----------------------------------------------------------------
+    // Render mode (Classic vs Enhanced Smooth)
+    // -----------------------------------------------------------------
+    enum class RenderMode { Classic, EnhancedSmooth };
+
+    void set_render_mode(RenderMode mode) { current_render_mode = mode; }
+    RenderMode get_render_mode() const { return current_render_mode; }
+    void toggle_render_mode();
+    const char* render_mode_name() const;
+
     // Text rendering
     void render_text(int screen_x, int screen_y, const std::string& text, SDL_Color color);
 
@@ -136,6 +163,8 @@ private:
     std::map<std::string, bool> tileset_blackout;
     std::map<std::string, Sprite> sprites;
     std::map<std::string, SpriteAnimationData*> enemy_sprites;  // Enemy sprite animation data
+
+    RenderMode current_render_mode = RenderMode::Classic;
 
     // Helper functions
     TextureInfo load_png(const std::string& filepath);

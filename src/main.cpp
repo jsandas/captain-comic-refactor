@@ -38,6 +38,13 @@ uint8_t key_state_teleport = 0;           // Teleport key (CapsLock-style bindin
 uint8_t previous_key_state_teleport = 0;  // Track previous teleport key state for edge trigger
 int camera_x = 0;
 
+// Smooth renderer interpolation state: snapshot of positions at the end of
+// the previous physics tick.  The render loop lerps between these and the
+// current values using the tick accumulator fraction.
+float prev_camera_x = 0.0f;
+float prev_comic_x = 0.0f;
+float prev_comic_y = 0.0f;
+
 // Item collection state
 uint8_t comic_has_door_key = 0;  // 1 if player has door key, 0 otherwise
 uint8_t comic_num_lives = 0;  // Number of lives remaining (counts up from 0 to 5, then subtracts 1)
@@ -917,6 +924,13 @@ int main(int argc, const char* argv[]) {
                     key_state_teleport = 1;
                 }
 
+                // F5 — toggle Enhanced Smooth / Classic renderer (edge-triggered, any game state)
+                if (key == SDLK_F5 && e.key.repeat == 0) {
+                    g_graphics->toggle_render_mode();
+                    std::cout << "[Renderer] Switched to: " << g_graphics->render_mode_name()
+                              << std::endl;
+                }
+
                 // Process cheat keys (only active if --debug flag set)
                 g_cheats->process_input(e.key.keysym.sym);
             } else if (e.type == SDL_KEYUP) {
@@ -1157,6 +1171,13 @@ int main(int argc, const char* argv[]) {
 
                 // Game-over is handled by physics when Comic hits the bottom of playfield
                 // (sound triggered there).  No additional check needed here.
+
+                // Snapshot positions for smooth-renderer interpolation: these are sampled
+                // at the *end* of the tick so the next rendered frame can lerp between
+                // prev (last tick) and current (this tick).
+                prev_camera_x = static_cast<float>(camera_x);
+                prev_comic_x = static_cast<float>(comic_x);
+                prev_comic_y = static_cast<float>(comic_y);
             }
         } else {
             tick_accumulator = 0.0;
@@ -1270,6 +1291,35 @@ int main(int argc, const char* argv[]) {
             }
         }
 
+        // Floating-point render scale for the enhanced smooth renderer.
+        // Using the exact scale factor avoids the rounding error that causes
+        // tile-boundary snapping in the classic integer path.
+        const float render_scale_f = (letterbox_scale < 0.125f) ? 1.0f : 8.0f * letterbox_scale;
+
+        // -----------------------------------------------------------------
+        // Enhanced Smooth Renderer: compute interpolation alpha.
+        // alpha = fraction of the current physics tick that has elapsed,
+        // in [0, 1].  At alpha=0 we show the previous tick state; at alpha=1
+        // we show the fully-advanced current tick state.  Values in between
+        // give smooth sub-tick positions at any monitor refresh rate.
+        // -----------------------------------------------------------------
+        const bool smooth_mode =
+            (g_graphics->get_render_mode() == GraphicsSystem::RenderMode::EnhancedSmooth);
+        const float alpha =
+            smooth_mode ? std::clamp(static_cast<float>(tick_accumulator / MS_PER_TICK), 0.0f, 1.0f)
+                        : 1.0f;  // Classic mode: always snap to current-tick position
+
+        // Interpolated render positions (identical to integer positions in classic mode).
+        const float render_camera_x =
+            smooth_mode ? (prev_camera_x + alpha * (static_cast<float>(camera_x) - prev_camera_x))
+                        : static_cast<float>(camera_x);
+        const float render_comic_x =
+            smooth_mode ? (prev_comic_x + alpha * (static_cast<float>(comic_x) - prev_comic_x))
+                        : static_cast<float>(comic_x);
+        const float render_comic_y =
+            smooth_mode ? (prev_comic_y + alpha * (static_cast<float>(comic_y) - prev_comic_y))
+                        : static_cast<float>(comic_y);
+
         Tileset* tileset = cached_tileset;
 
         // Render tiles with offscreen margin for seamless scrolling.
@@ -1277,22 +1327,32 @@ int main(int argc, const char* argv[]) {
         // slightly outside the visible playfield and let viewport clipping
         // hide any offscreen portions.
         const int OFFSCREEN_MARGIN_UNITS = 2;
-        const int min_visible_x = camera_x - OFFSCREEN_MARGIN_UNITS;
-        const int max_visible_x = camera_x + PLAYFIELD_WIDTH + OFFSCREEN_MARGIN_UNITS;
+        const int min_visible_x = static_cast<int>(render_camera_x) - OFFSCREEN_MARGIN_UNITS;
+        const int max_visible_x =
+            static_cast<int>(render_camera_x) + PLAYFIELD_WIDTH + OFFSCREEN_MARGIN_UNITS;
 
         for (int ty = 0; ty < MAP_HEIGHT_TILES; ty++) {
             for (int tx = 0; tx < MAP_WIDTH_TILES; tx++) {
-                int world_x = tx * 2;  // Tile x in game units
+                const int world_x = tx * 2;  // Tile x in game units
 
                 // Render tiles within visible range (with left margin for scrolling).
                 // Each tile is 2 units wide, so render if tile overlaps the range.
                 if (world_x + 2 > min_visible_x && world_x < max_visible_x) {
-                    uint8_t tile = get_tile_at(tx * 2, ty * 2);
+                    const uint8_t tile = get_tile_at(tx * 2, ty * 2);
 
-                    int screen_x = (world_x - camera_x) * render_scale;
-                    int screen_y = ty * 2 * render_scale;
-
-                    g_graphics->render_tile(screen_x, screen_y, tileset, tile, render_scale);
+                    if (smooth_mode) {
+                        // Enhanced Smooth: floating-point screen position
+                        const float screen_x =
+                            (static_cast<float>(world_x) - render_camera_x) * render_scale_f;
+                        const float screen_y = static_cast<float>(ty * 2) * render_scale_f;
+                        g_graphics->render_tile_f(screen_x, screen_y, tileset, tile,
+                                                  render_scale_f);
+                    } else {
+                        // Classic: integer screen position (original behaviour)
+                        const int screen_x = (world_x - camera_x) * render_scale;
+                        const int screen_y = ty * 2 * render_scale;
+                        g_graphics->render_tile(screen_x, screen_y, tileset, tile, render_scale);
+                    }
                 }
             }
         }
@@ -1399,27 +1459,46 @@ int main(int argc, const char* argv[]) {
         if (current_animation && door_player_visible) {
             const AnimationFrame* frame = g_graphics->get_current_frame(*current_animation);
             if (frame) {
-                // Center player on screen relative to camera
-                // Player is 2 units wide, 4 units tall in game coords
-                int screen_x = (comic_x - camera_x) * render_scale + render_scale;  // Center X
-                int screen_y = comic_y * render_scale + render_scale * 2;           // Center Y
-                int player_width = render_scale * 2;
-                const int player_full_height = render_scale * 4;
-                if (should_clip_player_death_render()) {
-                    // Compute how much of the sprite still fits within the playfield
-                    // viewport so the sinking effect matches natural SDL clipping.
-                    // sprite_top_y == comic_y * render_scale (center Y - half height).
-                    const int sprite_top_y = screen_y - player_full_height / 2;
-                    const int clip_h =
-                        std::clamp(playfield_viewport.h - sprite_top_y, 0, player_full_height);
-                    if (clip_h > 0) {
-                        g_graphics->render_sprite_top_clip_scaled(screen_x, screen_y, frame->sprite,
-                                                                  player_width, player_full_height,
-                                                                  clip_h);
+                if (smooth_mode) {
+                    // Enhanced Smooth: sub-pixel interpolated player position
+                    const float screen_x =
+                        (render_comic_x - render_camera_x) * render_scale_f + render_scale_f;
+                    const float screen_y = render_comic_y * render_scale_f + render_scale_f * 2.0f;
+                    const float player_width = render_scale_f * 2.0f;
+                    const float player_full_height = render_scale_f * 4.0f;
+                    if (should_clip_player_death_render()) {
+                        const float sprite_top_y = screen_y - player_full_height * 0.5f;
+                        const float clip_h =
+                            std::clamp(static_cast<float>(playfield_viewport.h) - sprite_top_y,
+                                       0.0f, player_full_height);
+                        if (clip_h > 0.0f) {
+                            g_graphics->render_sprite_top_clip_scaled_f(screen_x, screen_y,
+                                                                        frame->sprite, player_width,
+                                                                        player_full_height, clip_h);
+                        }
+                    } else {
+                        g_graphics->render_sprite_centered_scaled_f(
+                            screen_x, screen_y, frame->sprite, player_width, player_full_height);
                     }
                 } else {
-                    g_graphics->render_sprite_centered_scaled(screen_x, screen_y, frame->sprite,
-                                                              player_width, player_full_height);
+                    // Classic: integer screen position (original behaviour)
+                    const int screen_x = (comic_x - camera_x) * render_scale + render_scale;
+                    const int screen_y = comic_y * render_scale + render_scale * 2;
+                    const int player_width = render_scale * 2;
+                    const int player_full_height = render_scale * 4;
+                    if (should_clip_player_death_render()) {
+                        const int sprite_top_y = screen_y - player_full_height / 2;
+                        const int clip_h =
+                            std::clamp(playfield_viewport.h - sprite_top_y, 0, player_full_height);
+                        if (clip_h > 0) {
+                            g_graphics->render_sprite_top_clip_scaled(screen_x, screen_y,
+                                                                      frame->sprite, player_width,
+                                                                      player_full_height, clip_h);
+                        }
+                    } else {
+                        g_graphics->render_sprite_centered_scaled(screen_x, screen_y, frame->sprite,
+                                                                  player_width, player_full_height);
+                    }
                 }
             }
         }
