@@ -29,7 +29,7 @@ jobs:
             os: macos-latest
             package_ext: tar.gz
           - name: windows-x64
-            os: windows-latest
+            os: windows-2022
             package_ext: zip
 
     env:
