@@ -137,7 +137,7 @@ public:
     // -----------------------------------------------------------------
     enum class RenderMode { Classic, EnhancedSmooth };
 
-    void set_render_mode(RenderMode mode) { current_render_mode = mode; }
+    [[maybe_unused]] void set_render_mode(RenderMode mode) { current_render_mode = mode; }
     RenderMode get_render_mode() const { return current_render_mode; }
     void toggle_render_mode();
     const char* render_mode_name() const;
