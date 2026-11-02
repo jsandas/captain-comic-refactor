@@ -741,16 +741,25 @@ int main(int argc, const char* argv[]) {
             }
         }
 
+        // cppcheck-suppress knownConditionTrueFalse
+        if (quit) {
+            stop_game_music();
+            return;
+        }
+
         play_game_music(GameMusic::TITLE);
 
         SDL_Texture* victory_texture = load_fullscreen_texture("sys002.ega.png");
         if (victory_texture) {
             render_fullscreen_texture(victory_texture);
-            wait_for_new_keypress();
+            if (!wait_for_new_keypress()) {
+                return;
+            }
         }
 
         stop_game_music();
 
+        // cppcheck-suppress knownConditionTrueFalse
         if (!quit) {
             render_beam_in_frame(false, nullptr, false);
 
