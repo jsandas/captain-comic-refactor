@@ -960,7 +960,6 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) const {
         // Assembly: inc al; check_vertical; dec al; jnc .apply_gravity (accept move)
         //            else: .start_falling → .undo_position_change (restore original pos)
         if (check_vertical_enemy_map_collision(enemy->x, static_cast<uint8_t>(new_y + 1))) {
-            // cppcheck-suppress redundantAssignment
             // Intentional reassignment to match .undo_position_change assembly label semantics:
             // explicitly signals the "undo" path even though proposed_y was already enemy->y
             proposed_y = enemy->y;  // collision: restore original (.undo_position_change)
