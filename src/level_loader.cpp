@@ -12,24 +12,10 @@
 #include <iostream>
 
 #include "../include/actors.h"
+#include "../include/game_state.h"
 #include "../include/graphics.h"
 #include "../include/level_tiles.h"
 #include "../include/physics.h"
-
-/* External game state (defined in main.cpp) */
-extern int comic_x;
-extern int comic_y;
-extern int8_t comic_y_vel;
-extern uint8_t current_level_number;
-extern uint8_t current_stage_number;
-extern const level_t* current_level_ptr;
-extern int8_t source_door_level_number;
-extern int8_t source_door_stage_number;
-extern uint8_t comic_x_checkpoint;
-extern uint8_t comic_y_checkpoint;
-extern int camera_x;
-extern GraphicsSystem* g_graphics;
-extern ActorSystem* g_actor_system;
 
 /* Runtime mutable copies of level data */
 static level_t runtime_levels[8];

@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "../include/audio.h"
+#include "../include/game_state.h"
 #include "../include/physics.h"
 
 // Testing hook defined in header; see comment there.
@@ -26,18 +27,7 @@ static uint8_t g_door_pending_stage = 0;
  * Reference: jsandas/comic-c src/doors.c
  */
 
-/* External game state variables (defined in main.cpp) */
-extern int comic_x;
-extern int comic_y;
-extern uint8_t comic_has_door_key;
-extern uint8_t key_state_open;
-extern uint8_t current_level_number;
-extern uint8_t current_stage_number;
-extern const level_t* current_level_ptr;
-
-/* Source door tracking for proper reciprocal door positioning */
-extern int8_t source_door_level_number;
-extern int8_t source_door_stage_number;
+/* External definitions live in game_state.h; no per-module externs needed here. */
 
 /* External functions for level loading (defined in level_loader.cpp) */
 extern void load_new_level();

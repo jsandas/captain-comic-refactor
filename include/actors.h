@@ -102,9 +102,10 @@ public:
     /* Initialize the actor system */
     static bool initialize();
 
-    /* Update all actors for one game tick */
-    void update(uint8_t comic_x, uint8_t comic_y, uint8_t comic_facing, const uint8_t* tiles,
-                int camera_x, uint8_t fire_key = 0);
+    /* Update all actors for one game tick. Parameters use player_* / cam_x names
+     * because the identically-named globals live in game_state.h. */
+    void update(uint8_t player_x, uint8_t player_y, uint8_t player_facing, const uint8_t* tiles,
+                int cam_x, uint8_t fire_key = 0);
 
     /* Get array of enemies */
     const std::vector<enemy_t>& get_enemies() const { return enemies; }
@@ -119,7 +120,7 @@ public:
     bool load_effect_sprites(GraphicsSystem* graphics_system);
 
     /* Render all active fireballs */
-    void render_fireballs(GraphicsSystem* graphics_system, int camera_x, int render_scale) const;
+    void render_fireballs(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
 
     /* Reset fireballs (called on stage load) */
     void reset_fireballs();
@@ -146,7 +147,7 @@ public:
     bool load_item_sprites(GraphicsSystem* graphics_system);
 
     /* Render the current stage's item if not yet collected */
-    void render_item(GraphicsSystem* graphics_system, int camera_x, int render_scale) const;
+    void render_item(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
 
     /* Apply item effect (public for testing) */
     void apply_item_effect(uint8_t item_type);
@@ -159,7 +160,7 @@ public:
                                  GraphicsSystem* graphics_system);
 
     /* Render enemies for the current frame */
-    void render_enemies(GraphicsSystem* graphics_system, int camera_x, int render_scale) const;
+    void render_enemies(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
 
     /* Check if a specific tile is solid */
     bool is_tile_solid(uint8_t tile_id) const;

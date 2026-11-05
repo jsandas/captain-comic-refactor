@@ -110,6 +110,7 @@ add_library(comic_core STATIC
     src/audio.cpp
     src/cheats.cpp
     src/doors.cpp
+    src/game_state.cpp
     src/graphics.cpp
     src/level_data.cpp
     src/level_loader.cpp

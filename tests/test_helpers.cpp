@@ -7,46 +7,8 @@
 #include <SDL2/SDL_mixer.h>
 #endif
 
-// Global variables
+// Test-only globals
 int failures = 0;
-int comic_x = 0;
-int comic_y = 0;
-int8_t comic_y_vel = 0;
-int8_t comic_x_momentum = 0;
-uint8_t comic_facing = 1;
-uint8_t comic_animation = 0;
-uint8_t comic_is_falling_or_jumping = 0;
-uint8_t comic_jump_counter = 0;
-uint8_t comic_jump_power = JUMP_POWER_DEFAULT;
-uint8_t key_state_jump = 0;
-uint8_t previous_key_state_jump = 0;
-uint8_t key_state_left = 0;
-uint8_t key_state_right = 0;
-uint8_t key_state_open = 0;
-int camera_x = 0;
-
-uint8_t comic_has_door_key = 0;
-uint8_t current_level_number = 1;
-uint8_t current_stage_number = 0;
-const level_t* current_level_ptr = nullptr;
-int8_t source_door_level_number = -1;
-int8_t source_door_stage_number = -1;
-
-// Door animation globals are provided by doors.cpp via extern declarations in test_helpers.h
-
-uint8_t comic_y_checkpoint = 12;
-uint8_t comic_x_checkpoint = 14;
-
-ActorSystem* g_actor_system = nullptr;
-
-bool game_over_triggered = false;
-uint8_t comic_num_lives = 0;
-
-uint8_t comic_hp = MAX_HP;
-uint8_t comic_hp_pending_increase = 0;
-
-uint8_t score_bytes[3] = {0, 0, 0};
-uint8_t score_10000_counter = 0;
 
 // Helper implementations
 void check(bool condition, const std::string& message) {
