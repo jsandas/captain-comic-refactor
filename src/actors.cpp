@@ -919,9 +919,18 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) const {
         //           up)
         // Simplified: proposed_y += (int8_t)(y_vel >> 3)
         // For y_vel=-7: delta=-1, proposed_y decreases by 1 (moves up 1 unit)
-        // NOTE: must use arithmetic shift, not division: C++ / 8 truncates toward
-        // zero (-7/8 == 0), which cancels the leap entirely.
-        int8_t delta = static_cast<int8_t>(enemy->y_vel >> ENEMY_VELOCITY_SHIFT);
+        // NOTE: must use arithmetic-shift (floor) semantics, not plain
+        // division: C++ / 8 truncates toward zero (-7/8 == 0), which cancels
+        // the leap entirely. Written as an explicit floor division rather
+        // than `y_vel >> 3` because shifting a negative value is
+        // implementation-defined before C++20 (cppcheck shiftNegativeLHS).
+        // y_vel is negative here (guarded above), so a nonzero remainder
+        // always rounds down one extra step.
+        const int y_vel_signed = enemy->y_vel;
+        int delta = y_vel_signed / 8;
+        if ((y_vel_signed % 8) != 0) {
+            --delta;  // floor toward negative infinity, matching sar
+        }
         int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(delta);
         if (new_y < 0) {
             // Unsigned underflow → hit top of playfield (.undo_position_change)
