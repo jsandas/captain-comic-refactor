@@ -197,9 +197,12 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
 
 ### Plan
 
-- [ ] **P1.** Restore or remove the missing tile generator: either re-create
+- [x] **P1.** Restore or remove the missing tile generator: either re-create
   `tools/generate_tiles.cpp` or fold tile export into `extract_assets.py`; fix the stale
   banner and old project name in `level_tiles.cpp:1-10`.
+  ✅ Done — restored `tools/generate_tiles.cpp` (from history, commit `b659759~1`),
+  regenerated `src/level_tiles.cpp` (byte-identical tile data, banner updated, output
+  clang-formatted). REGENERATION: compile + run as banner says, then `make format`.
 - [ ] **P2.** Compile `comic_core` uniformly as C++20; drop the MSVC-only special case.
 - [ ] **P3.** Move test files to `target_sources()` per directory; keep the explicit
   source list per module rather than a flat hardcoded list.
