@@ -4,18 +4,9 @@
 #include <iostream>
 
 #include "audio.h"
+#include "game_state.h"
 #include "level.h"
 #include "physics.h"
-
-// Global door key flag defined in main.cpp (used by doors.cpp)
-extern uint8_t comic_has_door_key;
-extern uint8_t comic_hp;
-extern uint8_t comic_hp_pending_increase;
-extern uint8_t comic_num_lives;
-
-// Score bytes from main.cpp for award_points()
-extern uint8_t score_bytes[3];
-extern uint8_t score_10000_counter;
 
 /**
  * award_points - Award points to the player's score
@@ -276,7 +267,7 @@ void ActorSystem::setup_enemies_for_stage(const level_t* level, int level_index,
     reset_fireballs();
 }
 
-void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x,
+void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
                                  int render_scale) const {
     if (!graphics_system) {
         return;
@@ -293,8 +284,8 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x,
         }
 
         // Cull enemies outside the visible viewport; 2-unit margin covers sprite width
-        if (static_cast<int>(enemy.x) < camera_x - 2 ||
-            static_cast<int>(enemy.x) >= camera_x + PLAYFIELD_WIDTH + 2) {
+        if (static_cast<int>(enemy.x) < cam_x - 2 ||
+            static_cast<int>(enemy.x) >= cam_x + PLAYFIELD_WIDTH + 2) {
             continue;
         }
 
@@ -330,7 +321,7 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int camera_x,
         }
 
         const int enemy_screen_x =
-            (static_cast<int>(enemy.x) - camera_x) * render_scale + render_scale;
+            (static_cast<int>(enemy.x) - cam_x) * render_scale + render_scale;
         const int enemy_screen_y = static_cast<int>(enemy.y) * render_scale + render_scale;
 
         auto render_enemy_base = [&]() {
@@ -419,13 +410,13 @@ bool ActorSystem::load_effect_sprites(GraphicsSystem* graphics_system) {
 /**
  * Main update function - called once per game tick
  */
-void ActorSystem::update(uint8_t comic_x, uint8_t comic_y, uint8_t comic_facing,
-                         const uint8_t* tiles, int camera_x, uint8_t fire_key) {
+void ActorSystem::update(uint8_t player_x, uint8_t player_y, uint8_t player_facing,
+                         const uint8_t* tiles, int cam_x, uint8_t fire_key) {
     // Store global state for use by behavior functions
-    g_comic_x = comic_x;
-    g_comic_y = comic_y;
-    g_comic_facing = comic_facing;
-    g_camera_x = camera_x;
+    g_comic_x = player_x;
+    g_comic_y = player_y;
+    g_comic_facing = player_facing;
+    g_camera_x = cam_x;
     current_tiles = tiles;
 
     auto despawn_enemy = [&](enemy_t& enemy) {
@@ -926,8 +917,21 @@ void ActorSystem::enemy_behavior_leap(enemy_t* enemy) const {
         // Assembly: sar y_vel 3x (arithmetic) → y_vel/8, still negative (e.g. -7>>3 = -1)
         //           neg → positive upward delta; sub al, delta → proposed_y += delta (negative =
         //           up)
-        // Simplified: proposed_y += (int8_t)(y_vel / 8);
-        int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(enemy->y_vel / 8);
+        // Simplified: proposed_y += (int8_t)(y_vel >> 3)
+        // For y_vel=-7: delta=-1, proposed_y decreases by 1 (moves up 1 unit)
+        // NOTE: must use arithmetic-shift (floor) semantics, not plain
+        // division: C++ / 8 truncates toward zero (-7/8 == 0), which cancels
+        // the leap entirely. Written as an explicit floor division rather
+        // than `y_vel >> 3` because shifting a negative value is
+        // implementation-defined before C++20 (cppcheck shiftNegativeLHS).
+        // y_vel is negative here (guarded above), so a nonzero remainder
+        // always rounds down one extra step.
+        const int y_vel_signed = enemy->y_vel;
+        int delta = y_vel_signed / 8;
+        if ((y_vel_signed % 8) != 0) {
+            --delta;  // floor toward negative infinity, matching sar
+        }
+        int16_t new_y = static_cast<int16_t>(proposed_y) + static_cast<int16_t>(delta);
         if (new_y < 0) {
             // Unsigned underflow → hit top of playfield (.undo_position_change)
             // cppcheck-suppress redundantAssignment
@@ -1499,7 +1503,7 @@ void ActorSystem::handle_fireballs() {
  * Render all active fireballs.
  * Fireball sprites are 16x8 px originals; rendered at 2× scale → 32x16 screen pixels.
  */
-void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int camera_x,
+void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
                                    int render_scale) const {
     if (!graphics_system || comic_firepower == 0) {
         return;
@@ -1516,7 +1520,7 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int camera_x
             continue;
         }
 
-        int rel_x = static_cast<int>(fb.x) - camera_x;
+        int rel_x = static_cast<int>(fb.x) - cam_x;
         if (rel_x < 0 || rel_x >= PLAYFIELD_WIDTH) {
             continue;
         }
@@ -1743,8 +1747,7 @@ void ActorSystem::apply_item_effect(uint8_t item_type) {
  * Render the current stage's item if not yet collected.
  * Item sprites are 16×16 pixels (2 game units × 2 game units).
  */
-void ActorSystem::render_item(GraphicsSystem* graphics_system, int camera_x,
-                              int render_scale) const {
+void ActorSystem::render_item(GraphicsSystem* graphics_system, int cam_x, int render_scale) const {
     if (!graphics_system) {
         return;
     }
@@ -1763,7 +1766,7 @@ void ActorSystem::render_item(GraphicsSystem* graphics_system, int camera_x,
     }
 
     // Check if item is visible in playfield
-    int rel_x = static_cast<int>(current_item_x) - camera_x;
+    int rel_x = static_cast<int>(current_item_x) - cam_x;
     if (rel_x < 0 || rel_x > PLAYFIELD_WIDTH) {
         return;  // Off-screen
     }

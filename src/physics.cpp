@@ -5,41 +5,11 @@
 #include <iostream>
 
 #include "../include/audio.h"
+#include "../include/game_state.h"
 #include "../include/level_loader.h"
 
 // Cheat system flags
 bool cheat_noclip = false;
-
-// External game state (defined in main.cpp)
-extern int comic_x;
-extern int comic_y;
-extern int8_t comic_y_vel;
-extern int8_t comic_x_momentum;
-extern uint8_t comic_facing;
-extern uint8_t comic_is_falling_or_jumping;
-extern uint8_t comic_jump_counter;
-extern uint8_t comic_jump_power;
-extern uint8_t key_state_jump;
-extern uint8_t previous_key_state_jump;
-extern uint8_t key_state_left;
-extern uint8_t key_state_right;
-extern int camera_x;
-
-// Level/stage tracking (defined in main.cpp)
-extern uint8_t current_level_number;
-extern uint8_t current_stage_number;
-extern const level_t* current_level_ptr;
-extern int8_t source_door_level_number;
-extern int8_t source_door_stage_number;
-extern uint8_t comic_hp;
-extern uint8_t comic_num_lives;
-
-// Game-over flag from main.cpp
-extern bool game_over_triggered;
-
-// Checkpoint position (defined in main.cpp)
-extern uint8_t comic_y_checkpoint;
-extern uint8_t comic_x_checkpoint;
 
 // Tile map data
 static uint8_t current_tiles[MAP_WIDTH_TILES * MAP_HEIGHT_TILES];

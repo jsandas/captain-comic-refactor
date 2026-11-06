@@ -13,18 +13,9 @@
 #include <unordered_set>
 
 #include "../include/cheats.h"
+#include "../include/game_state.h"
 #include "../include/level.h"
 #include "../include/physics.h"
-
-// External game state (defined in main.cpp)
-extern int comic_x;
-extern int comic_y;
-extern int8_t comic_y_vel;
-extern int8_t comic_x_momentum;
-extern uint8_t comic_facing;
-extern uint8_t current_level_number;
-extern uint8_t current_stage_number;
-extern int camera_x;
 
 // Global graphics system
 GraphicsSystem* g_graphics = nullptr;

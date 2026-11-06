@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "../include/actors.h"
+#include "../include/game_state.h"
 #include "../include/level.h"
 #include "../include/level_loader.h"
 
@@ -23,19 +24,8 @@ void print_cheat_menu() {
 // Global cheat system instance
 CheatSystem* g_cheats = nullptr;
 
-// External references to game state from main.cpp
-extern int comic_x;
-extern int comic_y;
-extern int8_t comic_y_vel;
-extern int8_t comic_x_momentum;
-extern uint8_t comic_is_falling_or_jumping;
-extern int camera_x;
-extern uint8_t current_level_number;
-extern uint8_t current_stage_number;
-extern ActorSystem* g_actor_system;  // Actor system for item granting
-
-// External reference to physics cheat flags
-extern bool cheat_noclip;
+// Game state and cheat flags are declared via game_state.h / physics.h,
+// included above.
 
 CheatSystem::CheatSystem()
     : initialized(false),
