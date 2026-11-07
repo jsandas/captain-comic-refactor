@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "audio.h"
+#include "game_constants.h"
 #include "game_state.h"
 #include "level.h"
 #include "physics.h"
@@ -61,8 +62,6 @@ void award_points(uint16_t points) {
 }
 
 void award_extra_life() {
-    constexpr uint8_t MAX_NUM_LIVES = 5;
-
     play_game_sound(GameSound::EXTRA_LIFE);
 
     if (comic_num_lives >= MAX_NUM_LIVES) {

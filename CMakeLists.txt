@@ -107,25 +107,44 @@ if (NOT SDL2_TARGET OR NOT SDL2_IMAGE_TARGET OR NOT SDL2_TTF_TARGET)
 endif()
 
 # --- Core Game Logic Library ---
-# Shared logic used by both the main game and the test suite
-add_library(comic_core STATIC
+# Shared logic used by both the main game and the test suite.
+# Sources are registered per-directory via target_sources() and grouped by
+# module, so a new module adds one line next to its siblings instead of
+# hunting down a flat global list.
+add_library(comic_core STATIC)
+
+target_sources(comic_core PRIVATE
     src/actors.cpp
+)
+target_sources(comic_core PRIVATE
     src/audio.cpp
+)
+target_sources(comic_core PRIVATE
     src/cheats.cpp
     src/doors.cpp
+)
+target_sources(comic_core PRIVATE
     src/game_sequences.cpp
     src/game_state.cpp
+)
+target_sources(comic_core PRIVATE
     src/graphics.cpp
+    src/ui_system.cpp
+)
+target_sources(comic_core PRIVATE
     src/high_scores.cpp
     src/input_bindings.cpp
+    src/text_screen_utils.cpp
+    src/title_sequence.cpp
+)
+target_sources(comic_core PRIVATE
     src/level_data.cpp
     src/level_loader.cpp
     src/level_tiles.cpp
+)
+target_sources(comic_core PRIVATE
     src/physics.cpp
     src/player_teleport.cpp
-    src/text_screen_utils.cpp
-    src/title_sequence.cpp
-    src/ui_system.cpp
 )
 
 target_include_directories(comic_core PUBLIC 
@@ -158,15 +177,17 @@ target_compile_definitions(captain_comic PRIVATE SDL_MAIN_HANDLED)
 # --- Test Suite ---
 enable_testing()
 
-add_executable(comic_tests 
-    tests/test_main.cpp
-    tests/test_helpers.cpp
-    tests/test_physics.cpp
-    tests/test_graphics.cpp
-    tests/test_actors.cpp
-    tests/test_audio.cpp
-    tests/test_ui.cpp
-)
+# Test sources are registered per-directory via target_sources(); each test
+# file self-registers its cases via REGISTER_TEST(), so adding tests no longer
+# touches build metadata.
+add_executable(comic_tests)
+
+target_sources(comic_tests PRIVATE tests/test_main.cpp tests/test_helpers.cpp)
+target_sources(comic_tests PRIVATE tests/test_physics.cpp)
+target_sources(comic_tests PRIVATE tests/test_graphics.cpp)
+target_sources(comic_tests PRIVATE tests/test_actors.cpp)
+target_sources(comic_tests PRIVATE tests/test_audio.cpp)
+target_sources(comic_tests PRIVATE tests/test_ui.cpp)
 target_link_libraries(comic_tests PRIVATE comic_core)
 target_compile_definitions(comic_tests PRIVATE SDL_MAIN_HANDLED)
 

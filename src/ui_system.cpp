@@ -3,9 +3,10 @@
 #include <iostream>
 #include <sstream>
 
-UISystem::UISystem()
+UISystem::UISystem(GraphicsSystem* graphics)
     : initialized(false),
       inventory_animation_counter(0),
+      graphics(graphics),
       life_icon_bright(nullptr),
       life_icon_dark(nullptr),
       meter_full(nullptr),
@@ -32,7 +33,7 @@ bool UISystem::initialize() {
     // Ensure retries start from a known empty state.
     cleanup();
 
-    if (!g_graphics) {
+    if (!graphics) {
         std::cerr << "Graphics system not initialized" << std::endl;
         return false;
     }
@@ -259,19 +260,19 @@ void UISystem::update() {
 }
 
 Sprite* UISystem::load_ui_sprite(const std::string& sprite_name) {
-    if (!g_graphics) return nullptr;
+    if (!graphics) return nullptr;
 
     // UI sprites are not directional, so we use empty direction string
-    if (!g_graphics->load_sprite(sprite_name, "")) {
+    if (!graphics->load_sprite(sprite_name, "")) {
         return nullptr;
     }
 
-    return g_graphics->get_sprite(sprite_name, "");
+    return graphics->get_sprite(sprite_name, "");
 }
 
-void UISystem::render_sprite_at(const Sprite* sprite, int x, int y, int width, int height) {
-    if (!g_graphics || !sprite) return;
-    g_graphics->render_sprite_scaled(x, y, *sprite, width, height, false);
+void UISystem::render_sprite_at(const Sprite* sprite, int x, int y, int width, int height) const {
+    if (!graphics || !sprite) return;
+    graphics->render_sprite_scaled(x, y, *sprite, width, height, false);
 }
 
 void UISystem::render_hud(const uint8_t score_bytes[3], uint8_t num_lives, uint8_t hp,
@@ -325,7 +326,6 @@ void UISystem::render_lives(uint8_t num_lives) const {
 
     if (!life_icon_bright || !life_icon_dark) return;
 
-    constexpr uint8_t MAX_NUM_LIVES = 5;
     constexpr int START_X = 48;
     constexpr int LIFE_SPACING = 24;
     const HUDLayout layout = get_hud_layout();

@@ -29,7 +29,7 @@ bool write_minimal_png(const std::filesystem::path& path) {
 }
 }  // namespace
 
-void test_animation_looping() {
+REGISTER_TEST(test_animation_looping) {
     reset_physics_state();
     GraphicsSystem graphics(nullptr);
     Animation anim = make_animation({100, 200, 100}, true);
@@ -47,7 +47,7 @@ void test_animation_looping() {
     check(anim.current_frame == 0, "looping: frame at 450ms should loop to 0");
 }
 
-void test_animation_non_looping() {
+REGISTER_TEST(test_animation_non_looping) {
     reset_physics_state();
     GraphicsSystem graphics(nullptr);
     Animation anim = make_animation({100, 200, 100}, false);
@@ -62,7 +62,7 @@ void test_animation_non_looping() {
     check(anim.current_frame == 2, "non-looping: frame at 450ms should clamp to 2");
 }
 
-void test_animation_zero_duration() {
+REGISTER_TEST(test_animation_zero_duration) {
     reset_physics_state();
     GraphicsSystem graphics(nullptr);
     Animation anim = make_animation({0, 0}, true);
@@ -72,7 +72,7 @@ void test_animation_zero_duration() {
           "zero duration: frame index should stay in range");
 }
 
-void test_animation_frames_initialize_sprite_state() {
+REGISTER_TEST(test_animation_frames_initialize_sprite_state) {
     reset_physics_state();
     Animation anim = make_animation({100, 200}, true);
 
@@ -83,7 +83,7 @@ void test_animation_frames_initialize_sprite_state() {
           "new animation frame sprite should start with zero size");
 }
 
-void test_enemy_animation_sequence() {
+REGISTER_TEST(test_enemy_animation_sequence) {
     reset_physics_state();
     std::vector<uint8_t> loop_sequence = build_enemy_animation_sequence(3, ENEMY_ANIMATION_LOOP);
     check(loop_sequence == std::vector<uint8_t>({0, 1, 2}),
@@ -103,7 +103,7 @@ void test_enemy_animation_sequence() {
     check(empty_sequence.empty(), "enemy sequence should be empty for 0 frames");
 }
 
-void test_tileset_blackout_state_tracking() {
+REGISTER_TEST(test_tileset_blackout_state_tracking) {
     // set_tileset_blackout against an empty tilesets map takes the early-return
     // path (no tileset loaded yet) but must still record the requested state so
     // that load_tileset can apply it when the tileset is loaded later.
@@ -130,7 +130,7 @@ void test_tileset_blackout_state_tracking() {
           "blackout: castle state must remain false after forest was set");
 }
 
-void test_asset_path_resolution() {
+REGISTER_TEST(test_asset_path_resolution) {
     reset_physics_state();
     namespace fs = std::filesystem;
     // create a temporary directory tree mimicking the asset layout
@@ -181,7 +181,7 @@ void test_asset_path_resolution() {
     fs::remove_all(base);
 }
 
-void test_tileset_blackout_state_tracks_unloaded_tileset() {
+REGISTER_TEST(test_tileset_blackout_state_tracks_unloaded_tileset) {
     reset_physics_state();
     namespace fs = std::filesystem;
 
@@ -273,7 +273,7 @@ void test_tileset_blackout_state_tracks_unloaded_tileset() {
 // smaller value than render_scale * PLAYFIELD_HEIGHT (which equals 20 * render_scale),
 // causing the bottom of the player sprite to be clipped when falling back to the
 // floor from a jump.
-void test_playfield_viewport_height_matches_render_scale() {
+REGISTER_TEST(test_playfield_viewport_height_matches_render_scale) {
     // Probe a representative range of window widths. For each width, compute
     // letterbox_scale (as main.cpp does) and verify the two formulas agree.
     // EGA_WIDTH=320, EGA_HEIGHT=200; playfield is 192x160 EGA pixels (24x20 game units).
@@ -318,7 +318,7 @@ void test_playfield_viewport_height_matches_render_scale() {
           "render_scale * PLAYFIELD_HEIGHT must always contain the bottom of the playfield sprite");
 }
 
-void test_runtime_level_tiles_populated() {
+REGISTER_TEST(test_runtime_level_tiles_populated) {
     reset_physics_state();
     initialize_level_data();
     current_level_number = LEVEL_NUMBER_FOREST;

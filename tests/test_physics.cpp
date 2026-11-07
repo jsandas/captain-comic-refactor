@@ -4,7 +4,7 @@
 #include "test_cases.h"
 #include "test_helpers.h"
 
-void test_physics_tiles() {
+REGISTER_TEST(test_physics_tiles) {
     reset_physics_state();
     init_test_level();
 
@@ -18,7 +18,7 @@ void test_physics_tiles() {
     check(!is_tile_solid(0x3E), "tile 0x3E should be passable");
 }
 
-void test_jump_edge_trigger() {
+REGISTER_TEST(test_jump_edge_trigger) {
     reset_physics_state();
 
     key_state_jump = 1;
@@ -34,7 +34,7 @@ void test_jump_edge_trigger() {
     check(comic_is_falling_or_jumping == 0, "holding jump should not retrigger");
 }
 
-void test_jump_recharge() {
+REGISTER_TEST(test_jump_recharge) {
     reset_physics_state();
 
     comic_jump_counter = 1;
@@ -43,7 +43,7 @@ void test_jump_recharge() {
     check(comic_jump_counter == comic_jump_power, "jump counter should recharge on release");
 }
 
-void test_jump_height() {
+REGISTER_TEST(test_jump_height) {
     reset_physics_state();
     int default_height = measure_jump_height(JUMP_POWER_DEFAULT);
     int boots_height = measure_jump_height(JUMP_POWER_WITH_BOOTS);
@@ -54,7 +54,7 @@ void test_jump_height() {
           "boots jump height should be 9 units (got " + std::to_string(boots_height) + ")");
 }
 
-void test_space_level_uses_lower_gravity() {
+REGISTER_TEST(test_space_level_uses_lower_gravity) {
     reset_physics_state();
     comic_x = 4;
     comic_y = 6;
@@ -84,7 +84,7 @@ void test_space_level_uses_lower_gravity() {
     check(comic_y_vel == COMIC_GRAVITY_SPACE, "space level should apply COMIC_GRAVITY_SPACE");
 }
 
-void test_jump_top_clamped_to_playfield() {
+REGISTER_TEST(test_jump_top_clamped_to_playfield) {
     reset_physics_state();
     comic_x = 4;
     comic_y = 0;
@@ -102,7 +102,7 @@ void test_jump_top_clamped_to_playfield() {
     check(!is_player_dying(), "jump top clamp: top clamp should not trigger death state");
 }
 
-void test_player_death_sequence_respawn() {
+REGISTER_TEST(test_player_death_sequence_respawn) {
     reset_physics_state();
     game_over_triggered = false;
     comic_num_lives = 3;
@@ -149,7 +149,7 @@ void test_player_death_sequence_respawn() {
           "death: respawn path should clear jump input edge state");
 }
 
-void test_player_death_sequence_game_over() {
+REGISTER_TEST(test_player_death_sequence_game_over) {
     reset_physics_state();
     game_over_triggered = false;
     comic_num_lives = 0;
@@ -174,7 +174,7 @@ void test_player_death_sequence_game_over() {
     check(comic_hp == 2, "game_over: zero-lives path should not reset HP");
 }
 
-void test_player_death_sequence_last_life_allows_one_more_play() {
+REGISTER_TEST(test_player_death_sequence_last_life_allows_one_more_play) {
     reset_physics_state();
     game_over_triggered = false;
     comic_num_lives = 1;
@@ -198,7 +198,7 @@ void test_player_death_sequence_last_life_allows_one_more_play() {
     check(comic_hp == MAX_HP, "last_life: respawn should refill HP");
 }
 
-void test_teleport_does_not_update_respawn_checkpoint() {
+REGISTER_TEST(test_teleport_does_not_update_respawn_checkpoint) {
     reset_physics_state();
 
     comic_x_checkpoint = 22;
@@ -215,7 +215,7 @@ void test_teleport_does_not_update_respawn_checkpoint() {
           "teleport_checkpoint: teleport should not modify respawn checkpoint");
 }
 
-void test_door_activation_alignment_x() {
+REGISTER_TEST(test_door_activation_alignment_x) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 1, 1);
@@ -280,7 +280,7 @@ void test_door_activation_alignment_x() {
     check(result == 0, "door should not activate left of position (x=9, y=8)");
 }
 
-void test_door_activation_alignment_y() {
+REGISTER_TEST(test_door_activation_alignment_y) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 1, 1);
@@ -321,7 +321,7 @@ void test_door_activation_alignment_y() {
     check(result == 0, "door should not activate below door (y=9)");
 }
 
-void test_door_key_requirement() {
+REGISTER_TEST(test_door_key_requirement) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 1, 1);
@@ -350,7 +350,7 @@ void test_door_key_requirement() {
     check(result == 1, "door should activate with key");
 }
 
-void test_door_open_key_requirement() {
+REGISTER_TEST(test_door_open_key_requirement) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 1, 1);
@@ -379,7 +379,7 @@ void test_door_open_key_requirement() {
     check(result == 1, "check_door_activation should return 1 when open key pressed");
 }
 
-void test_door_state_update_same_level() {
+REGISTER_TEST(test_door_state_update_same_level) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 1, 1);  // Target same level, stage 1
@@ -407,7 +407,7 @@ void test_door_state_update_same_level() {
     check(current_level_number == 1, "current_level_number should remain 1 (same level)");
 }
 
-void test_door_state_update_different_level() {
+REGISTER_TEST(test_door_state_update_different_level) {
     reset_physics_state();
     reset_door_state();
     const level_t* level = create_test_level_with_door(10, 8, 2, 1);  // Target different level
@@ -454,7 +454,7 @@ static void check_door_render_state(DoorAnimationRenderMode expected_mode,
     check(player_visible == expected_player_visible, context + ": unexpected player visibility");
 }
 
-void test_door_animation_phase_progression_and_render_state() {
+REGISTER_TEST(test_door_animation_phase_progression_and_render_state) {
     reset_physics_state();
     reset_door_state();
     initialize_level_data();
@@ -560,7 +560,7 @@ void test_door_animation_phase_progression_and_render_state() {
     g_skip_load_on_door = true;
 }
 
-void test_door_destination_load_deferred_until_entering_complete() {
+REGISTER_TEST(test_door_destination_load_deferred_until_entering_complete) {
     reset_physics_state();
     reset_door_state();
     initialize_level_data();
@@ -614,7 +614,7 @@ void test_door_destination_load_deferred_until_entering_complete() {
     g_skip_load_on_door = true;
 }
 
-void test_door_entry_sets_checkpoint_for_respawn() {
+REGISTER_TEST(test_door_entry_sets_checkpoint_for_respawn) {
     reset_physics_state();
     initialize_level_data();
 
@@ -638,7 +638,7 @@ void test_door_entry_sets_checkpoint_for_respawn() {
           "door_entry_checkpoint: source door markers should reset after stage load");
 }
 
-void test_stage_left_exit_blocked() {
+REGISTER_TEST(test_stage_left_exit_blocked) {
     reset_physics_state();
     comic_x = 10;
     comic_y = 12;
@@ -647,7 +647,7 @@ void test_stage_left_exit_blocked() {
     check(comic_x == 9, "Comic should move left normally when not at edge");
 }
 
-void test_stage_right_exit_blocked() {
+REGISTER_TEST(test_stage_right_exit_blocked) {
     reset_physics_state();
     comic_x = MAP_WIDTH - 10;
     comic_y = 12;
@@ -656,7 +656,7 @@ void test_stage_right_exit_blocked() {
     check(comic_x == MAP_WIDTH - 9, "Comic should move right normally when not at edge");
 }
 
-void test_stage_left_edge_detection() {
+REGISTER_TEST(test_stage_left_edge_detection) {
     reset_physics_state();
     comic_x = 0;
     comic_y = 12;
@@ -669,7 +669,7 @@ void test_stage_left_edge_detection() {
     check(comic_x_momentum == 0, "momentum should be cleared when blocked at edge");
 }
 
-void test_stage_right_edge_detection() {
+REGISTER_TEST(test_stage_right_edge_detection) {
     reset_physics_state();
     comic_x = MAP_WIDTH - 2;
     comic_y = 12;
@@ -682,7 +682,7 @@ void test_stage_right_edge_detection() {
     check(comic_x_momentum == 0, "momentum should be cleared when blocked at edge");
 }
 
-void test_cave_level_solidity() {
+REGISTER_TEST(test_cave_level_solidity) {
     reset_physics_state();
     initialize_level_data();
     current_level_number = LEVEL_NUMBER_CAVE;
@@ -705,7 +705,7 @@ void test_cave_level_solidity() {
     reset_level_tiles();
 }
 
-void test_problematic_levels_have_solid_tiles() {
+REGISTER_TEST(test_problematic_levels_have_solid_tiles) {
     reset_physics_state();
     initialize_level_data();
 

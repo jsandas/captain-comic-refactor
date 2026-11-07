@@ -33,7 +33,7 @@ static void reset_actor_state(const ActorSystem& actor_system) {
     }
 }
 
-void test_actor_spawn_one_per_tick() {
+REGISTER_TEST(test_actor_spawn_one_per_tick) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -63,7 +63,7 @@ void test_actor_spawn_one_per_tick() {
     check(spawned == 1, "actor_spawn: should spawn exactly 1 enemy per tick");
 }
 
-void test_actor_spawn_offset_cycling() {
+REGISTER_TEST(test_actor_spawn_offset_cycling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -101,7 +101,7 @@ void test_actor_spawn_offset_cycling() {
     check(has_variation, "actor_spawn_offset: spawn positions should vary due to offset cycling");
 }
 
-void test_actor_despawn_distance() {
+REGISTER_TEST(test_actor_despawn_distance) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -131,7 +131,7 @@ void test_actor_despawn_distance() {
     delete[] tiles;
 }
 
-void test_actor_player_collision() {
+REGISTER_TEST(test_actor_player_collision) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -156,7 +156,7 @@ void test_actor_player_collision() {
     delete[] tiles;
 }
 
-void test_actor_death_animation() {
+REGISTER_TEST(test_actor_death_animation) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -185,7 +185,7 @@ void test_actor_death_animation() {
     delete[] tiles;
 }
 
-void test_actor_respawn_timer_cycling() {
+REGISTER_TEST(test_actor_respawn_timer_cycling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -216,7 +216,7 @@ void test_actor_respawn_timer_cycling() {
     delete[] tiles;
 }
 
-void test_actor_animation_frames() {
+REGISTER_TEST(test_actor_animation_frames) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -242,7 +242,7 @@ void test_actor_animation_frames() {
     delete[] tiles;
 }
 
-void test_actor_behavior_bounce_movement() {
+REGISTER_TEST(test_actor_behavior_bounce_movement) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -278,7 +278,7 @@ void test_actor_behavior_bounce_movement() {
     delete[] tiles;
 }
 
-void test_actor_restraint_throttling() {
+REGISTER_TEST(test_actor_restraint_throttling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -304,7 +304,7 @@ void test_actor_restraint_throttling() {
     delete[] tiles;
 }
 
-void test_fireball_meter_depletion_timing() {
+REGISTER_TEST(test_fireball_meter_depletion_timing) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -331,7 +331,7 @@ void test_fireball_meter_depletion_timing() {
           "fireball_meter: should decrement on third firing tick");
 }
 
-void test_fireball_meter_recharge_timing() {
+REGISTER_TEST(test_fireball_meter_recharge_timing) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -351,7 +351,7 @@ void test_fireball_meter_recharge_timing() {
           "fireball_meter: should recharge every other tick when idle");
 }
 
-void test_fireball_offscreen_deactivates() {
+REGISTER_TEST(test_fireball_offscreen_deactivates) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -376,7 +376,7 @@ void test_fireball_offscreen_deactivates() {
           "fireball_offscreen: should deactivate when leaving camera bounds");
 }
 
-void test_fireball_collision_sets_white_spark() {
+REGISTER_TEST(test_fireball_collision_sets_white_spark) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -410,7 +410,7 @@ void test_fireball_collision_sets_white_spark() {
           "fireball_collision: fireball should deactivate on hit");
 }
 
-void test_fireball_corkscrew_motion() {
+REGISTER_TEST(test_fireball_corkscrew_motion) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -440,7 +440,7 @@ void test_fireball_corkscrew_motion() {
           "fireball_corkscrew: should move up and flip to phase 2");
 }
 
-void test_item_collection_tracking() {
+REGISTER_TEST(test_item_collection_tracking) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -464,7 +464,7 @@ void test_item_collection_tracking() {
     check(actor_system.comic_has_boots == 1, "item_collection: should have boots after collection");
 }
 
-void test_actor_door_key_sync() {
+REGISTER_TEST(test_actor_door_key_sync) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -476,7 +476,7 @@ void test_actor_door_key_sync() {
     check(comic_has_door_key == 1, "global door key flag should be set by ActorSystem");
 }
 
-void test_actor_spawn_avoids_solid_tiles() {
+REGISTER_TEST(test_actor_spawn_avoids_solid_tiles) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -509,7 +509,7 @@ void test_actor_spawn_avoids_solid_tiles() {
           "actor_spawn_solidity: spawned enemy should not be placed inside a solid tile");
 }
 
-void test_actor_pit_fall_despawns_without_spark() {
+REGISTER_TEST(test_actor_pit_fall_despawns_without_spark) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -538,7 +538,7 @@ void test_actor_pit_fall_despawns_without_spark() {
           "actor_pit_fall: enemy should despawn on the tick after bottom-edge clamp");
 }
 
-void test_item_blastola_cola_firepower() {
+REGISTER_TEST(test_item_blastola_cola_firepower) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -557,7 +557,7 @@ void test_item_blastola_cola_firepower() {
     check(actor_system.comic_firepower == 5, "blastola_cola: firepower should not exceed 5");
 }
 
-void test_item_boots_jump_power() {
+REGISTER_TEST(test_item_boots_jump_power) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -576,7 +576,7 @@ void test_item_boots_jump_power() {
           "boots_jump: boots jump power should be greater than default");
 }
 
-void test_item_corkscrew_flag() {
+REGISTER_TEST(test_item_corkscrew_flag) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -588,7 +588,7 @@ void test_item_corkscrew_flag() {
           "corkscrew: should have corkscrew after collection");
 }
 
-void test_item_treasure_counting() {
+REGISTER_TEST(test_item_treasure_counting) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -623,7 +623,7 @@ void test_item_treasure_counting() {
           "treasures: duplicate collection should not increase count");
 }
 
-void test_item_special_items() {
+REGISTER_TEST(test_item_special_items) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();

@@ -1,7 +1,7 @@
 #include "test_cases.h"
 #include "test_helpers.h"
 
-void test_ui_score_base100_encoding() {
+REGISTER_TEST(test_ui_score_base100_encoding) {
     reset_physics_state();
     uint8_t digits[6];
 
@@ -33,7 +33,7 @@ void test_ui_score_base100_encoding() {
           "ui_score: max score should convert to all 9 digits");
 }
 
-void test_hud_layout_positions() {
+REGISTER_TEST(test_hud_layout_positions) {
     reset_physics_state();
     const UISystem::HUDLayout layout = UISystem::get_hud_layout();
 
@@ -44,7 +44,7 @@ void test_hud_layout_positions() {
     check(layout.fireball_meter_y == 34, "hud_layout: fireball meter Y should be 34");
 }
 
-void test_ui_fireball_meter_cell_mapping() {
+REGISTER_TEST(test_ui_fireball_meter_cell_mapping) {
     reset_physics_state();
     // Test empty meter (0)
     check(UISystem::fireball_meter_to_cell_state(0, 0) == 0,
@@ -87,7 +87,7 @@ void test_ui_fireball_meter_cell_mapping() {
           "ui_fireball: invalid cell index should return 0");
 }
 
-void test_ui_boots_detection() {
+REGISTER_TEST(test_ui_boots_detection) {
     reset_physics_state();
     // JUMP_POWER_DEFAULT is 4, WITH_BOOTS is 5
     check(!UISystem::has_boots(4), "ui_boots: jump power 4 (default) should not indicate boots");
@@ -96,7 +96,7 @@ void test_ui_boots_detection() {
     check(!UISystem::has_boots(3), "ui_boots: jump power 3 should not indicate boots");
 }
 
-void test_ui_score_edge_cases() {
+REGISTER_TEST(test_ui_score_edge_cases) {
     reset_physics_state();
     uint8_t digits[6];
 
@@ -115,7 +115,7 @@ void test_ui_score_edge_cases() {
     check(digits[1] == 1 && digits[2] == 0, "ui_score_edge: score 10000 should have digits[1]=1");
 }
 
-void test_ui_meter_all_states() {
+REGISTER_TEST(test_ui_meter_all_states) {
     reset_physics_state();
     const uint8_t expected_states[13][6] = {
         {0, 0, 0, 0, 0, 0}, {1, 0, 0, 0, 0, 0}, {2, 0, 0, 0, 0, 0}, {2, 1, 0, 0, 0, 0},
@@ -138,7 +138,7 @@ static void reset_score_bytes() {
     score_bytes[2] = 0;
 }
 
-void test_award_points_no_carry() {
+REGISTER_TEST(test_award_points_no_carry) {
     reset_physics_state();
     reset_score_bytes();
     award_points(50);
@@ -146,7 +146,7 @@ void test_award_points_no_carry() {
           "award_points: simple add no carry should be 50,0,0");
 }
 
-void test_award_points_accumulates_in_byte0() {
+REGISTER_TEST(test_award_points_accumulates_in_byte0) {
     reset_physics_state();
     reset_score_bytes();
     award_points(20);
@@ -155,7 +155,7 @@ void test_award_points_accumulates_in_byte0() {
           "award_points: accumulation in byte 0 should be 50");
 }
 
-void test_award_points_carry_into_byte1() {
+REGISTER_TEST(test_award_points_carry_into_byte1) {
     reset_physics_state();
     reset_score_bytes();
     award_points(80);
@@ -165,7 +165,7 @@ void test_award_points_carry_into_byte1() {
           "award_points: carry into byte 1 should be 20,1,0");
 }
 
-void test_award_points_full_carry_amount() {
+REGISTER_TEST(test_award_points_full_carry_amount) {
     reset_physics_state();
     reset_score_bytes();
     award_points(150);
@@ -173,7 +173,7 @@ void test_award_points_full_carry_amount() {
           "award_points: 150 points should carry to 50,1,0");
 }
 
-void test_award_points_large_value_above_255() {
+REGISTER_TEST(test_award_points_large_value_above_255) {
     reset_physics_state();
     reset_score_bytes();
     award_points(350);
@@ -181,7 +181,7 @@ void test_award_points_large_value_above_255() {
           "award_points: 350 points should be 50,3,0");
 }
 
-void test_award_points_max_score_saturation() {
+REGISTER_TEST(test_award_points_max_score_saturation) {
     reset_physics_state();
     score_bytes[0] = 90;
     score_bytes[1] = 99;
@@ -191,7 +191,7 @@ void test_award_points_max_score_saturation() {
           "award_points: should saturate at 99,99,99");
 }
 
-void test_award_points_large_carry_saturation() {
+REGISTER_TEST(test_award_points_large_carry_saturation) {
     reset_physics_state();
     // Large carry against a full top byte must saturate to max score.
     reset_score_bytes();
@@ -203,7 +203,7 @@ void test_award_points_large_carry_saturation() {
           "award_points: massive award should saturate at max");
 }
 
-void test_award_points_awards_extra_life_every_50000() {
+REGISTER_TEST(test_award_points_awards_extra_life_every_50000) {
     reset_physics_state();
     score_bytes[0] = 99;
     score_bytes[1] = 99;
@@ -223,7 +223,7 @@ void test_award_points_awards_extra_life_every_50000() {
           "award_points_50000: extra life should be awarded every 50000 points");
 }
 
-void test_award_points_awards_extra_life_after_500_internal_units() {
+REGISTER_TEST(test_award_points_awards_extra_life_after_500_internal_units) {
     reset_physics_state();
     comic_num_lives = 2;
 
@@ -239,7 +239,7 @@ void test_award_points_awards_extra_life_after_500_internal_units() {
           "award_points_500_internal: extra life should trigger at 500 internal units");
 }
 
-void test_high_score_bytes_conversion() {
+REGISTER_TEST(test_high_score_bytes_conversion) {
     reset_physics_state();
     // Zero score
     const uint8_t s0[3] = {0, 0, 0};

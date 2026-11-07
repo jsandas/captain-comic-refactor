@@ -1,10 +1,39 @@
 #ifndef CHEATS_H
 #define CHEATS_H
 
-#include <SDL2/SDL.h>
-
 #include <cstdint>
 #include <string>
+
+/**
+ * CheatKey - SDL-independent key set for cheat input.
+ *
+ * cheats.h deliberately does not include SDL: cheat logic must stay testable
+ * without a video backend. The platform layer (main.cpp SDL event loop)
+ * translates real SDL_Keycode values into this enum before calling
+ * CheatSystem::process_input().
+ */
+enum class CheatKey : uint8_t {
+    None,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    Digit0,
+    Digit1,
+    Digit2,
+    Digit3,
+    Digit4,
+    Digit5,
+    Digit6,
+    Digit7,
+    Digit8,
+    Digit9,
+    Q,
+    Backspace,
+    Return,
+    KpEnter,
+};
 
 /**
  * CheatSystem - Manages debug cheats and development tools
@@ -22,7 +51,7 @@ public:
     bool initialize(bool debug_mode);
 
     // Process keyboard input for cheat activation
-    void process_input(SDL_Keycode key);
+    void process_input(CheatKey key);
 
     // State queries
     [[maybe_unused]] bool is_debug_enabled() const { return debug_enabled; }
@@ -50,9 +79,9 @@ private:
     void activate_item_grant();
 
     // Input handling for multi-step cheats
-    void handle_level_warp_input(SDL_Keycode key);
-    void handle_position_warp_input(SDL_Keycode key);
-    void handle_item_grant_input(SDL_Keycode key);
+    void handle_level_warp_input(CheatKey key);
+    void handle_position_warp_input(CheatKey key);
+    void handle_item_grant_input(CheatKey key);
 
     // Execute warps
     void execute_level_warp();
@@ -84,6 +113,11 @@ private:
     bool awaiting_item_input;
     int8_t target_item;
 };
+
+// Cheat flags. cheat_noclip is the raw fast-read flag physics checks to bypass
+// collision detection when noclip is active; it lives here with the other
+// cheats (not in physics.h) because it is cheat state, not physics tuning.
+extern bool cheat_noclip;  // When true, disables collision detection
 
 // Global cheat system instance
 extern CheatSystem* g_cheats;

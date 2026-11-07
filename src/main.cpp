@@ -52,6 +52,38 @@ void process_door_input() {
     previous_key_state_open = key_state_open;
 }
 
+// Translate an SDL key event into the SDL-independent CheatKey enum, so
+// cheats.h does not need SDL at all (cheat logic stays testable without a
+// video backend). Unmapped keys become CheatKey::None and are ignored.
+static CheatKey cheat_key_from_sdl(const SDL_Keycode key) {
+    switch (key) {
+        case SDLK_F1:
+            return CheatKey::F1;
+        case SDLK_F2:
+            return CheatKey::F2;
+        case SDLK_F3:
+            return CheatKey::F3;
+        case SDLK_F4:
+            return CheatKey::F4;
+        case SDLK_F5:
+            return CheatKey::F5;
+        case SDLK_q:
+            return CheatKey::Q;
+        case SDLK_BACKSPACE:
+            return CheatKey::Backspace;
+        case SDLK_RETURN:
+            return CheatKey::Return;
+        case SDLK_KP_ENTER:
+            return CheatKey::KpEnter;
+        default:
+            break;
+    }
+    if (key >= SDLK_0 && key <= SDLK_9) {
+        return static_cast<CheatKey>(static_cast<int>(CheatKey::Digit0) + (key - SDLK_0));
+    }
+    return CheatKey::None;
+}
+
 int main(int argc, const char* argv[]) {
     // Parse command-line arguments
     bool debug_mode = false;
@@ -162,7 +194,7 @@ int main(int argc, const char* argv[]) {
     g_actor_system = &actor_system;
 
     // Initialize UI system
-    UISystem ui_system;
+    UISystem ui_system(g_graphics);
     if (!ui_system.initialize()) {
         std::cerr << "Warning: UI system initialization failed. HUD will not display properly."
                   << std::endl;
@@ -401,7 +433,7 @@ int main(int argc, const char* argv[]) {
                 }
 
                 // Process cheat keys (only active if --debug flag set)
-                g_cheats->process_input(e.key.keysym.sym);
+                g_cheats->process_input(cheat_key_from_sdl(e.key.keysym.sym));
             } else if (e.type == SDL_KEYUP) {
                 const InputBindings& bindings = get_input_bindings();
                 const SDL_Keycode key = e.key.keysym.sym;

@@ -5,7 +5,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 
-void test_audio_init_shutdown_idempotency() {
+REGISTER_TEST(test_audio_init_shutdown_idempotency) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_idempotency: SDL audio init should succeed");
     check(initialize_audio_system(), "audio_idempotency: first initialization should succeed");
@@ -20,7 +20,7 @@ void test_audio_init_shutdown_idempotency() {
     quit_sdl_audio();
 }
 
-void test_audio_graceful_failure_when_not_initialized() {
+REGISTER_TEST(test_audio_graceful_failure_when_not_initialized) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_uninitialized: SDL audio init should succeed");
     shutdown_audio_system();
@@ -32,7 +32,7 @@ void test_audio_graceful_failure_when_not_initialized() {
     quit_sdl_audio();
 }
 
-void test_audio_priority_interrupt() {
+REGISTER_TEST(test_audio_priority_interrupt) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_priority_interrupt: SDL audio init should succeed");
     check(initialize_audio_system(), "audio_priority_interrupt: initialization should succeed");
@@ -48,7 +48,7 @@ void test_audio_priority_interrupt() {
     quit_sdl_audio();
 }
 
-void test_audio_priority_blocking() {
+REGISTER_TEST(test_audio_priority_blocking) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_priority_blocking: SDL audio init should succeed");
     check(initialize_audio_system(), "audio_priority_blocking: initialization should succeed");
@@ -65,7 +65,7 @@ void test_audio_priority_blocking() {
     quit_sdl_audio();
 }
 
-void test_audio_enemy_hit_interrupts_fire() {
+REGISTER_TEST(test_audio_enemy_hit_interrupts_fire) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_enemy_hit_interrupts_fire: SDL audio init should succeed");
     check(initialize_audio_system(),
@@ -100,7 +100,7 @@ void test_audio_enemy_hit_interrupts_fire() {
     quit_sdl_audio();
 }
 
-void test_audio_all_sounds_playable() {
+REGISTER_TEST(test_audio_all_sounds_playable) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_all_sounds: SDL audio init should succeed");
     check(initialize_audio_system(), "audio_all_sounds: initialization should succeed");
@@ -141,7 +141,7 @@ void test_audio_all_sounds_playable() {
     quit_sdl_audio();
 }
 
-void test_audio_music_playback() {
+REGISTER_TEST(test_audio_music_playback) {
     reset_physics_state();
     check(init_sdl_audio(), "audio_music: SDL audio init should succeed");
     check(initialize_audio_system(), "audio_music: initialization should succeed");
@@ -162,26 +162,26 @@ void test_audio_music_playback() {
 
 #else
 
-void test_audio_init_shutdown_idempotency() {
+REGISTER_TEST(test_audio_init_shutdown_idempotency) {
     reset_physics_state();
     check(!initialize_audio_system(), "audio_no_mixer: init should fail without SDL2_mixer");
     check(!is_audio_system_ready(),
           "audio_no_mixer: system should not be ready without SDL2_mixer");
 }
 
-void test_audio_graceful_failure_when_not_initialized() {
+REGISTER_TEST(test_audio_graceful_failure_when_not_initialized) {
     reset_physics_state();
     check(!play_game_sound(GameSound::FIRE), "audio_no_mixer: play should fail without SDL2_mixer");
 }
 
-void test_audio_priority_interrupt() { reset_physics_state(); }
+REGISTER_TEST(test_audio_priority_interrupt) { reset_physics_state(); }
 
-void test_audio_priority_blocking() { reset_physics_state(); }
+REGISTER_TEST(test_audio_priority_blocking) { reset_physics_state(); }
 
-void test_audio_enemy_hit_interrupts_fire() { reset_physics_state(); }
+REGISTER_TEST(test_audio_enemy_hit_interrupts_fire) { reset_physics_state(); }
 
-void test_audio_all_sounds_playable() { reset_physics_state(); }
+REGISTER_TEST(test_audio_all_sounds_playable) { reset_physics_state(); }
 
-void test_audio_music_playback() { reset_physics_state(); }
+REGISTER_TEST(test_audio_music_playback) { reset_physics_state(); }
 
 #endif

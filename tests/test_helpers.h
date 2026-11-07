@@ -19,12 +19,7 @@
 #include "../include/player_teleport.h"
 #include "../include/title_sequence.h"
 #include "../include/ui_system.h"
-
-// Test case structure
-struct TestCase {
-    std::string name;
-    void (*run)() = nullptr;
-};
+#include "test_cases.h"
 
 // Shared game state is declared in game_state.h and defined in src/game_state.cpp
 // (part of comic_core); the tests link against the real definitions instead of

@@ -5,11 +5,9 @@
 #include <iostream>
 
 #include "../include/audio.h"
+#include "../include/cheats.h"  // cheat_noclip flag (cheats own this flag now)
 #include "../include/game_state.h"
 #include "../include/level_loader.h"
-
-// Cheat system flags
-bool cheat_noclip = false;
 
 // Tile map data
 static uint8_t current_tiles[MAP_WIDTH_TILES * MAP_HEIGHT_TILES];

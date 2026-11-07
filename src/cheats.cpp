@@ -8,7 +8,16 @@
 #include "../include/level.h"
 #include "../include/level_loader.h"
 
+// Cheat flag lives beside the other cheats now (declared in cheats.h); the
+// physics pipeline reads it to bypass collision while noclip is active.
+bool cheat_noclip = false;
+
 namespace {
+
+// Numeric value of a CheatKey digit key (Digit0..Digit9), 0-9.
+constexpr int digit_value(CheatKey key) {
+    return static_cast<int>(key) - static_cast<int>(CheatKey::Digit0);
+}
 
 void print_cheat_menu() {
     std::cout << "[CHEAT] Debug mode enabled. Press F1-F5 for cheats:" << std::endl;
@@ -78,7 +87,7 @@ void CheatSystem::cleanup() {
     initialized = false;
 }
 
-void CheatSystem::process_input(SDL_Keycode key) {
+void CheatSystem::process_input(CheatKey key) {
     if (!debug_enabled) {
         // Silently ignore cheat keys when debug not enabled
         return;
@@ -102,23 +111,23 @@ void CheatSystem::process_input(SDL_Keycode key) {
 
     // Handle direct cheat toggles
     switch (key) {
-        case SDLK_F1:
+        case CheatKey::F1:
             toggle_noclip();
             break;
 
-        case SDLK_F2:
+        case CheatKey::F2:
             activate_level_warp();
             break;
 
-        case SDLK_F3:
+        case CheatKey::F3:
             toggle_debug_overlay();
             break;
 
-        case SDLK_F4:
+        case CheatKey::F4:
             activate_position_warp();
             break;
 
-        case SDLK_F5:
+        case CheatKey::F5:
             activate_item_grant();
             break;
 
@@ -164,9 +173,9 @@ void CheatSystem::activate_position_warp() {
     std::cout.flush();
 }
 
-void CheatSystem::handle_level_warp_input(SDL_Keycode key) {
+void CheatSystem::handle_level_warp_input(CheatKey key) {
     // Cancel on Q
-    if (key == SDLK_q) {
+    if (key == CheatKey::Q) {
         awaiting_level_input = false;
         awaiting_stage_input = false;
         std::cout << "[CHEAT] Level warp cancelled" << std::endl;
@@ -176,8 +185,8 @@ void CheatSystem::handle_level_warp_input(SDL_Keycode key) {
 
     if (awaiting_level_input) {
         // Accept level input (0-7)
-        if (key >= SDLK_0 && key <= SDLK_7) {
-            target_level = key - SDLK_0;
+        if (key >= CheatKey::Digit0 && key <= CheatKey::Digit7) {
+            target_level = static_cast<int8_t>(digit_value(key));
             awaiting_level_input = false;
             awaiting_stage_input = true;
 
@@ -186,8 +195,8 @@ void CheatSystem::handle_level_warp_input(SDL_Keycode key) {
         }
     } else if (awaiting_stage_input) {
         // Accept stage input (0-2)
-        if (key >= SDLK_0 && key <= SDLK_2) {
-            target_stage = key - SDLK_0;
+        if (key >= CheatKey::Digit0 && key <= CheatKey::Digit2) {
+            target_stage = static_cast<int8_t>(digit_value(key));
             awaiting_stage_input = false;
 
             execute_level_warp();
@@ -195,9 +204,9 @@ void CheatSystem::handle_level_warp_input(SDL_Keycode key) {
     }
 }
 
-void CheatSystem::handle_position_warp_input(SDL_Keycode key) {
+void CheatSystem::handle_position_warp_input(CheatKey key) {
     // Cancel on Q
-    if (key == SDLK_q) {
+    if (key == CheatKey::Q) {
         awaiting_x_input = false;
         awaiting_y_input = false;
         position_input_buffer.clear();
@@ -207,19 +216,19 @@ void CheatSystem::handle_position_warp_input(SDL_Keycode key) {
     }
 
     // Handle numeric input
-    if (key >= SDLK_0 && key <= SDLK_9) {
+    if (key >= CheatKey::Digit0 && key <= CheatKey::Digit9) {
         // Limit input to 3 digits (sufficient for 0-255 range)
         constexpr size_t MAX_INPUT_LENGTH = 3;
         if (position_input_buffer.length() < MAX_INPUT_LENGTH) {
-            position_input_buffer += static_cast<char>('0' + (key - SDLK_0));
-            std::cout << static_cast<char>('0' + (key - SDLK_0));
+            position_input_buffer += static_cast<char>('0' + digit_value(key));
+            std::cout << static_cast<char>('0' + digit_value(key));
             std::cout.flush();
         }
         return;
     }
 
     // Handle backspace
-    if (key == SDLK_BACKSPACE && !position_input_buffer.empty()) {
+    if (key == CheatKey::Backspace && !position_input_buffer.empty()) {
         position_input_buffer.pop_back();
         std::cout << "\b \b";
         std::cout.flush();
@@ -227,7 +236,7 @@ void CheatSystem::handle_position_warp_input(SDL_Keycode key) {
     }
 
     // Handle enter/return
-    if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+    if (key == CheatKey::Return || key == CheatKey::KpEnter) {
         if (position_input_buffer.empty()) {
             return;  // Need at least one digit
         }
@@ -351,9 +360,9 @@ void CheatSystem::activate_item_grant() {
     std::cout << "  Q to cancel" << std::endl;
 }
 
-void CheatSystem::handle_item_grant_input(SDL_Keycode key) {
+void CheatSystem::handle_item_grant_input(CheatKey key) {
     // Cancel on Q
-    if (key == SDLK_q) {
+    if (key == CheatKey::Q) {
         awaiting_item_input = false;
         std::cout << "[CHEAT] Item grant cancelled" << std::endl;
         print_cheat_menu();
@@ -362,18 +371,15 @@ void CheatSystem::handle_item_grant_input(SDL_Keycode key) {
 
     // Map numeric keys to item types
     // 0-8 map directly to ITEM constants
-    // 9 maps to Shield (item type 14)
-    if (key >= SDLK_0 && key <= SDLK_9) {
-        int selection = key - SDLK_0;
+    // 9 maps to Shield (item type 14): the range guard above means any
+    // selection past the 0-8 direct mapping is exactly digit 9.
+    if (key >= CheatKey::Digit0 && key <= CheatKey::Digit9) {
+        const int selection = digit_value(key);
 
         if (selection <= 8) {
             target_item = selection;  // Direct mapping for 0-8
-        } else if (selection == 9) {
-            target_item = ITEM_SHIELD;  // Shield is item type 14
         } else {
-            std::cout << "[CHEAT] Invalid item selection" << std::endl;
-            awaiting_item_input = false;
-            return;
+            target_item = ITEM_SHIELD;
         }
 
         awaiting_item_input = false;
