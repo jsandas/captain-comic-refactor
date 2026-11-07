@@ -86,7 +86,6 @@ ActorSystem::ActorSystem()
       fireball_meter(0),
       comic_has_boots(0),
       comic_has_lantern(0),
-      comic_has_door_key(0),
       comic_has_teleport_wand(0),
       comic_has_gems(0),
       comic_has_crown(0),
@@ -1693,10 +1692,8 @@ void ActorSystem::apply_item_effect(uint8_t item_type) {
             break;
 
         case ITEM_DOOR_KEY:
-            comic_has_door_key = 1;
-            // keep global state in sync so door system (which still reads the
-            // global variable) sees the change. some code paths reference the
-            // global directly rather than querying the ActorSystem.
+            // Door key lives in the shared game state (game_state.h); the door
+            // system and HUD read that single copy directly.
             ::comic_has_door_key = 1;
             break;
 

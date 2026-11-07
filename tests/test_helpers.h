@@ -12,6 +12,7 @@
 #include "../include/doors.h"
 #include "../include/game_state.h"
 #include "../include/graphics.h"
+#include "../include/high_scores.h"
 #include "../include/level.h"
 #include "../include/level_loader.h"
 #include "../include/physics.h"

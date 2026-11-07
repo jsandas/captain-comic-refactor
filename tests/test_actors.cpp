@@ -473,8 +473,7 @@ void test_actor_door_key_sync() {
     comic_has_door_key = 0;
 
     actor_system.apply_item_effect(ITEM_DOOR_KEY);
-    check(actor_system.comic_has_door_key == 1, "actor system should have door key flag set");
-    check(comic_has_door_key == 1, "global door key variable should be synced by ActorSystem");
+    check(comic_has_door_key == 1, "global door key flag should be set by ActorSystem");
 }
 
 void test_actor_spawn_avoids_solid_tiles() {
@@ -629,12 +628,10 @@ void test_item_special_items() {
     ActorSystem actor_system;
     actor_system.initialize();
 
-    // Door Key
-    check(actor_system.comic_has_door_key == 0,
-          "special_items: should not have door key initially");
+    // Door Key (single source of truth: game_state.h global)
+    check(comic_has_door_key == 0, "special_items: should not have door key initially");
     actor_system.apply_item_effect(ITEM_DOOR_KEY);
-    check(actor_system.comic_has_door_key == 1,
-          "special_items: should have door key after collection");
+    check(comic_has_door_key == 1, "special_items: should have door key after collection");
 
     // Teleport Wand
     check(actor_system.comic_has_teleport_wand == 0,

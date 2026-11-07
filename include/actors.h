@@ -131,9 +131,10 @@ public:
     uint8_t fireball_meter;      /* Current fireball meter (0–MAX_FIREBALL_METER) */
 
     /* Additional item-related player flags */
-    uint8_t comic_has_boots;         /* 1 if Comic has Boots (increased jump power) */
-    uint8_t comic_has_lantern;       /* 1 if Comic has Lantern (castle lighting) */
-    uint8_t comic_has_door_key;      /* 1 if Comic has Door Key */
+    uint8_t comic_has_boots;   /* 1 if Comic has Boots (increased jump power) */
+    uint8_t comic_has_lantern; /* 1 if Comic has Lantern (castle lighting) */
+    /* Door key flag intentionally NOT here: it lives once, in game_state.h
+     * (comic_has_door_key), read by doors, HUD, and sequences alike. */
     uint8_t comic_has_teleport_wand; /* 1 if Comic has Teleport Wand */
     uint8_t comic_has_gems;          /* 1 if Comic collected Gems */
     uint8_t comic_has_crown;         /* 1 if Comic collected Crown */

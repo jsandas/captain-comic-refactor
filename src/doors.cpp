@@ -4,6 +4,7 @@
 
 #include "../include/audio.h"
 #include "../include/game_state.h"
+#include "../include/level_loader.h"
 #include "../include/physics.h"
 
 // Testing hook defined in header; see comment there.
@@ -27,11 +28,7 @@ static uint8_t g_door_pending_stage = 0;
  * Reference: jsandas/comic-c src/doors.c
  */
 
-/* External definitions live in game_state.h; no per-module externs needed here. */
-
-/* External functions for level loading (defined in level_loader.cpp) */
-extern void load_new_level();
-extern void load_new_stage();
+/* Level loading functions are declared in level_loader.h. */
 
 static void load_pending_door_destination() {
     const uint8_t target_level = g_door_pending_level;
