@@ -57,11 +57,11 @@ void update_hp_fill_tick();
  */
 struct GameSequenceContext {
     SDL_Renderer* renderer = nullptr;
-    GraphicsSystem* graphics = nullptr;      // asset paths, tile/sprite rendering
-    UISystem* ui = nullptr;                  // HUD rendering inside beam frames
-    ActorSystem* actors = nullptr;           // item/enemy rendering inside beam frames
-    Tileset* tileset = nullptr;              // current level tileset cache
-    Animation* current_animation = nullptr;  // player animation state (mutable frame cursor)
+    GraphicsSystem* graphics = nullptr;            // asset paths, tile/sprite rendering
+    UISystem* ui = nullptr;                        // HUD rendering inside beam frames
+    ActorSystem* actors = nullptr;                 // item/enemy rendering inside beam frames
+    Tileset* tileset = nullptr;                    // current level tileset cache
+    Animation* current_animation = nullptr;        // player animation state (mutable frame cursor)
     Sprite* const* materialize_sprites = nullptr;  // beam-in/out frames
     size_t materialize_sprite_count = 0;
     bool materialize_sprites_loaded = true;  // false when beam frames failed to load
