@@ -300,16 +300,10 @@ int main(int argc, const char* argv[]) {
         std::cerr << "Warning: Some item sprites failed to load" << std::endl;
     }
 
-    // Tick timing - match original game's ~9.1 Hz tick rate.
-    // The PC timer interrupt (IRQ 0) fires at 18.2065 Hz but game_tick_flag is
-    // only set on *odd* interrupt cycles (irq0_parity toggles 0,1,0,1,...),
-    // so the actual game logic runs at half the interrupt rate: ~9.1032 Hz.
-    // Based on analysis of the original DOS timer interrupt handler
-    // (original disassembly is not vendored in this repository).
-    constexpr double TICK_RATE = 18.2065 / 2.0;         // ~9.1032 Hz - actual game tick rate
-    constexpr double MS_PER_TICK = 1000.0 / TICK_RATE;  // ~109.86 ms per tick
+    // Tick timing uses the shared GAME_TICK_RATE_HZ / MS_PER_GAME_TICK
+    // constants (game_state.h), analyzed from the original DOS timer interrupt.
     constexpr int MAX_TICKS_PER_FRAME = 5;
-    constexpr double MAX_ACCUMULATED_MS = MS_PER_TICK * MAX_TICKS_PER_FRAME;
+    constexpr double MAX_ACCUMULATED_MS = MS_PER_GAME_TICK * MAX_TICKS_PER_FRAME;
     uint32_t last_tick_time = SDL_GetTicks();
     double tick_accumulator = 0.0;
 
@@ -444,8 +438,8 @@ int main(int argc, const char* argv[]) {
         // This decouples physics from rendering rate
         if (game_state == GameState::Playing) {
             int ticks_processed = 0;
-            while (tick_accumulator >= MS_PER_TICK && ticks_processed < MAX_TICKS_PER_FRAME) {
-                tick_accumulator -= MS_PER_TICK;
+            while (tick_accumulator >= MS_PER_GAME_TICK && ticks_processed < MAX_TICKS_PER_FRAME) {
+                tick_accumulator -= MS_PER_GAME_TICK;
                 ticks_processed++;
 
                 // Per-tick movement result must be cleared before any early-continue
@@ -956,7 +950,7 @@ int main(int argc, const char* argv[]) {
         SDL_RenderPresent(renderer);
 
         // Cap rendering to ~60 FPS while physics runs at ~9.1 Hz
-        if (tick_accumulator >= MS_PER_TICK) {
+        if (tick_accumulator >= MS_PER_GAME_TICK) {
             SDL_Delay(0);
         } else {
             SDL_Delay(16);

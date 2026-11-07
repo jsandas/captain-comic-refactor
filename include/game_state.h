@@ -16,6 +16,24 @@ class ActorSystem;
 enum class GameState { Playing, Paused, Victory, GameOver, Exiting };
 
 /**
+ * Game tick timing - single source of truth.
+ *
+ * The PC timer interrupt (IRQ 0) fires at 18.2065 Hz but game_tick_flag is only
+ * set on *odd* interrupt cycles (irq0_parity toggles 0,1,0,1,...), so the actual
+ * game logic runs at half the interrupt rate: ~9.1032 Hz. Based on analysis of
+ * the original DOS timer interrupt handler (original disassembly is not vendored
+ * in this repository).
+ *
+ * Every consumer of the game tick cadence (the main-loop accumulator and any
+ * special sequence that must run on the same cadence as gameplay) must derive
+ * its timing from these constants rather than re-deriving 18.2065/2.0 locally;
+ * a local re-derivation can drift from the tick pipeline when the timing logic
+ * changes.
+ */
+constexpr double GAME_TICK_RATE_HZ = 18.2065 / 2.0;  // ~9.1032 Hz - actual game tick rate
+constexpr double MS_PER_GAME_TICK = 1000.0 / GAME_TICK_RATE_HZ;  // ~109.86 ms per tick
+
+/**
  * game_state.h - Shared mutable game state
  *
  * This is the single home for the ~40 cross-module game-state globals. Every

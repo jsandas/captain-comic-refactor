@@ -79,9 +79,8 @@ void clear_gameplay_key_states() {
     previous_key_state_teleport = 0;
 }
 
-// Keep special sequences on the same cadence as gameplay logic for
-// faithful pacing in this implementation (~9.1 Hz tick rate, see main.cpp).
-constexpr double ANIMATION_TICK_MS = 1000.0 / (18.2065 / 2.0);
+// Keep special sequences on the same cadence as gameplay logic: sequences wait
+// one game tick (MS_PER_GAME_TICK, game_state.h) per animation step.
 
 // Game-over sprite placement in EGA playfield coordinates (shared by the
 // victory and game-over sequences).
@@ -90,11 +89,11 @@ constexpr int GAME_OVER_Y_EGA = 64;
 constexpr int GAME_OVER_WIDTH_EGA = 128;
 constexpr int GAME_OVER_HEIGHT_EGA = 48;
 
-// Wait ~ANIMATION_TICK_MS per tick while pumping SDL events.
+// Wait ~MS_PER_GAME_TICK per tick while pumping SDL events.
 // Returns false when SDL_QUIT is received; note that despite the const
 // reference, *context.quit is written through the pointer (trip flag).
 static bool wait_animation_ticks(const GameSequenceContext& context, int ticks) {
-    const uint32_t duration_ms = static_cast<uint32_t>(ANIMATION_TICK_MS * ticks + 0.5);
+    const uint32_t duration_ms = static_cast<uint32_t>(MS_PER_GAME_TICK * ticks + 0.5);
     uint32_t start = SDL_GetTicks();
     SDL_Event e;
     while (SDL_GetTicks() - start < duration_ms) {
