@@ -19,7 +19,8 @@ tools/     Python asset extraction (extract_assets.py)
 ### What is already right
 
 - Module *boundaries* are sensible: `physics`, `doors`, `actors`, `level_loader`, `audio`,
-  `ui_system`, `cheats` each have a header and a cpp.
+  `ui_system`, `cheats` each have a header and a cpp — plus the P2 extractions
+  `game_sequences`, `player_teleport`, `input_bindings`, `high_scores`, `text_screen_utils`.
 - `comic_core` as a static library shared by the executable **and** the tests is the right instinct.
 - Tile data is auto-generated (`level_tiles.cpp`), and level metadata is hand-authored
   designated-initializer tables (`level_data.cpp`, from `reference/R3_levels.asm`).
@@ -35,17 +36,21 @@ tools/     Python asset extraction (extract_assets.py)
 |---|---|---|
 | `src/level_tiles.cpp` | 2,006 | auto-generated |
 | `src/actors.cpp` | 1,791 | |
-| `src/title_sequence.cpp` | 1,775 | mixes 3 concerns (see §5) |
-| `src/main.cpp` | 1,518 | does 4 jobs (see §2) |
+| `src/title_sequence.cpp` | ~855 | presentation only since the split (was 1,775) |
+| `src/main.cpp` | ~965 | bootstrap + tick pipeline + gameplay render (was 1,518) |
+| `src/high_scores.cpp` | ~505 | leaderboard + COMIC.HGH + scores screen |
 | `src/graphics.cpp` | 811 | |
 | `src/audio.cpp` | 661 | |
 | `src/ui_system.cpp` | 569 | |
 | `src/level_data.cpp` | 562 | hand-written tables |
 | `src/physics.cpp` | 554 | |
 | `src/cheats.cpp` | 427 | |
-| `src/doors.cpp` | 309 | |
+| `src/doors.cpp` | ~305 | |
+| `src/game_sequences.cpp` | ~420 | beam sequences, victory/game-over, per-tick ramps |
+| `src/input_bindings.cpp` | ~285 | bindings + KEYS.DEF |
+| `src/text_screen_utils.cpp` | ~185 | shared DOS text-screen rendering |
 | `src/level_loader.cpp` | 230 | |
-| `src/player_teleport.cpp` | 11 | a single function of a feature stranded in main.cpp |
+| `src/player_teleport.cpp` | ~140 | teleport machine (state in game_state.h) |
 
 ---
 
@@ -92,9 +97,14 @@ hand-written `extern` blocks:
   game-state declarations and definitions. Even if the state stays global for now (to stay
   faithful to the original), a single header removes the copy-drift immediately.
 - [x] **P1.** Move the `GameState` enum into `game_state.h`.
-- [ ] **P2.** Delete every per-cpp `extern` block in favor of `#include "game_state.h"`.
-- [ ] **P2.** Rework `tests/test_helpers.cpp` to define/zero a single state object (
+- [x] **P2.** Delete every per-cpp `extern` block in favor of `#include "game_state.h"`.
+  ✅ Done — no per-module externs remain (physics, doors, level_loader, actors, graphics,
+  cheats all include `game_state.h`; doors.cpp's last two function externs were replaced
+  by `#include "level_loader.h"`).
+- [x] **P2.** Rework `tests/test_helpers.cpp` to define/zero a single state object (
   `reset_physics_state()` becomes "reset one struct").
+  ✅ Done as part of P1 — `test_helpers.cpp` no longer redefines the cluster; resets operate
+  on the real globals from/game state. (A single struct stays aspirational, see P3.)
 - [ ] **P3 (aspirational).** Wrap the state in a `GameState` struct owned by main and passed by
   reference.
 
@@ -119,11 +129,18 @@ Contents today:
 
 ### Plan
 
-- [ ] **P2.** Move the teleport state machine (state + `begin_teleport` /
+- [x] **P2.** Move the teleport state machine (state + `begin_teleport` /
   `handle_teleport_tick` / `process_teleport_input`) into `player_teleport.{h,cpp}`, joining
   the stranded `apply_teleport_destination_if_ready`.
-- [ ] **P2.** Move victory/game-over/lives/HP sequences into a new `gameplay.cpp` (or
+  ✅ Done — all teleport code now lives in `player_teleport.cpp`; the machine's globals
+  stay in game_state.h (rendering in main reads them from there).
+- [x] **P2.** Move victory/game-over/lives/HP sequences into a new `gameplay.cpp` (or
   `game_sequences.{h,cpp}`).
+  ✅ Done — `game_sequences.{h,cpp}` holds the beam-in intro, beam-out + victory tally,
+  game-over sequence, the per-tick lives/HP ramps (`update_lives_sequence_tick()`,
+  `update_hp_fill_tick()`), and `clear_gameplay_key_states()`. main.cpp wires a
+  `GameSequenceContext` (non-owning pointers; `quit`/`game_state` shared by reference) —
+  main.cpp went from 1,518 to ~965 lines.
 - [ ] **P3.** Move full-screen sequence texture loading/rendering into `GraphicsSystem`
   helpers so main.cpp keeps no raw SDL.
 - [ ] Target: `main.cpp` becomes thin bootstrap + tick pipeline.
@@ -144,8 +161,12 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
 
 ### Plan
 
-- [ ] **P2.** Make inventory flags single-source: either `GameState` or a `Player` struct owns
+- [x] **P2.** Make inventory flags single-source: either `GameState` or a `Player` struct owns
   items; `ActorSystem` reads it.
+  ✅ Done — `comic_has_door_key` is now owned once, by game_state (`.h/.cpp`). The
+  `ActorSystem::comic_has_door_key` member was removed; collecting a door key writes the
+  global, which doors, HUD, and sequences read directly. Remaining item flags stay on
+  ActorSystem until §4 P3 (below).
 - [ ] **P3.** Make `ActorSystem` data private; expose behavior (`take_damage()`,
   `collect_item()`, `get_jump_power()`, …) instead of fields.
 
@@ -171,9 +192,14 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
 
 ### Plan
 
-- [ ] **P2.** Split `title_sequence.cpp` into three modules: presentation (stays),
+- [x] **P2.** Split `title_sequence.cpp` into three modules: presentation (stays),
   `input_bindings.{h,cpp}`, `high_scores.{h,cpp}`. Persistence is data-domain logic; this
   cuts ~500 lines out of the presentation file.
+  ✅ Done — `input_bindings.{h,cpp}` (bindings, KEYS.DEF load/save, setup-menu helpers,
+  `key_matches_binding`) and `high_scores.{h,cpp}` (leaderboard model, COMIC.HGH
+  persistence, and the high-scores screen) extracted; shared DOS text-mode helpers moved
+  to `text_screen_utils.{h,cpp}`. title_sequence.cpp: 1,775 → ~855 lines, presentation
+  only.
 - [ ] **P3.** Own textures/fonts with `std::unique_ptr` + custom deleters in `GraphicsSystem`;
   fix hand-deletion on error paths.
 - [ ] **P3.** Replace `SDL_Keycode` in `cheats.h` with the project's own enum.
@@ -203,7 +229,9 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   ✅ Done — restored `tools/generate_tiles.cpp` (from history, commit `b659759~1`),
   regenerated `src/level_tiles.cpp` (byte-identical tile data, banner updated, output
   clang-formatted). REGENERATION: compile + run as banner says, then `make format`.
-- [ ] **P2.** Compile `comic_core` uniformly as C++20; drop the MSVC-only special case.
+- [x] **P2.** Compile `comic_core` uniformly as C++20; drop the MSVC-only special case.
+  ✅ Done — the project standard is now C++20 for all targets (`CMAKE_CXX_STANDARD 20`);
+  the MSVC-only per-target override was removed.
 - [ ] **P3.** Move test files to `target_sources()` per directory; keep the explicit
   source list per module rather than a flat hardcoded list.
 

@@ -3,49 +3,19 @@
 
 #include <SDL2/SDL.h>
 
-#include <cstdint>
+/**
+ * Title Sequence presentation module.
+ *
+ * Replicates the DOS title flow (SYS000-SYS004 screens, palette fades, music)
+ * plus the startup notice/keyboard-setup menus.  Gameplay data domains are
+ * split into sibling modules:
+ *
+ *   - include/input_bindings.h: gameplay key bindings + KEYS.DEF persistence
+ *   - include/high_scores.h:    Hall of Fame leaderboard + COMIC.HGH persistence
+ */
 
 // Forward declaration
 class GraphicsSystem;
-
-struct InputBindings {
-    SDL_Keycode move_left;
-    SDL_Keycode move_right;
-    SDL_Keycode jump;
-    SDL_Keycode fire;
-    SDL_Keycode open_door;
-    SDL_Keycode teleport;
-};
-
-/**
- * Get the current configured gameplay input bindings.
- */
-const InputBindings& get_input_bindings();
-
-/**
- * Restore default gameplay bindings.
- */
-[[maybe_unused]] void reset_input_bindings_to_defaults();
-
-/**
- * Replace gameplay bindings with the provided mapping.
- */
-void set_input_bindings(const InputBindings& bindings);
-
-/**
- * Load gameplay bindings from KEYS.DEF.
- *
- * Returns true if bindings were loaded and applied.
- * Returns false if the file is missing or invalid.
- */
-bool load_input_bindings_from_file();
-
-/**
- * Save gameplay bindings to KEYS.DEF.
- *
- * Returns true on success, false on write failure.
- */
-bool save_input_bindings_to_file();
 
 /**
  * Run the startup notice/menu shown before the title sequence.
@@ -114,29 +84,5 @@ SDL_Texture* get_hud_texture();
  * Call once at program shutdown.
  */
 void cleanup_title_sequence();
-
-/**
- * Convert a 3-byte base-100 score encoding to a plain decimal uint32_t.
- *
- * score_bytes[0] is the rightmost decimal-digit pair (0–99),
- * score_bytes[1] is the middle pair, score_bytes[2] is the leftmost pair.
- * Result = bytes[2]*10000 + bytes[1]*100 + bytes[0].   Maximum: 999 999.
- */
-uint32_t score_bytes_to_uint32(const uint8_t score_bytes[3]);
-
-/**
- * Display the high scores screen (sys005.ega.png) with a live leaderboard.
- *
- * If score_bytes is non-null and the score qualifies for the top 10,
- * prompts the player to enter their name before revealing the final table.
- * The leaderboard is persisted to COMIC.HGH in the user preference directory.
- *
- * @param renderer    SDL renderer
- * @param graphics    Graphics system (for asset path resolution); may be nullptr
- * @param score_bytes 3-byte base-100 score array, or nullptr to show existing scores only
- * @return true to continue, false if the user closed the window (SDL_QUIT)
- */
-bool run_high_scores_screen(SDL_Renderer* renderer, GraphicsSystem* graphics,
-                            const uint8_t* score_bytes);
 
 #endif  // TITLE_SEQUENCE_H

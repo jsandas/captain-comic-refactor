@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 project(CaptainComic)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Designated initializers in level_data.cpp require C++20, so the whole
+# project compiles uniformly as C++20 (no per-compiler special cases).
 
 option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 
@@ -110,25 +113,20 @@ add_library(comic_core STATIC
     src/audio.cpp
     src/cheats.cpp
     src/doors.cpp
+    src/game_sequences.cpp
     src/game_state.cpp
     src/graphics.cpp
+    src/high_scores.cpp
+    src/input_bindings.cpp
     src/level_data.cpp
     src/level_loader.cpp
     src/level_tiles.cpp
     src/physics.cpp
     src/player_teleport.cpp
+    src/text_screen_utils.cpp
     src/title_sequence.cpp
     src/ui_system.cpp
 )
-
-if (MSVC)
-    # level_data.cpp uses designated initializers; apply C++20 to comic_core on MSVC.
-    # Per-file standard overrides are not consistently honored by all VS/MSBuild flows.
-    set_target_properties(comic_core PROPERTIES
-        CXX_STANDARD 20
-        CXX_STANDARD_REQUIRED ON
-    )
-endif()
 
 target_include_directories(comic_core PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
