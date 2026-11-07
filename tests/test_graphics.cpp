@@ -239,7 +239,7 @@ REGISTER_TEST(test_tileset_blackout_state_tracks_unloaded_tileset) {
         check(castle_tileset != nullptr, "castle tileset should be retrievable after load");
 
         if (castle_tileset != nullptr && !castle_tileset->tiles.empty()) {
-            SDL_Texture* sample_texture = castle_tileset->tiles.begin()->second.texture;
+            SDL_Texture* sample_texture = castle_tileset->tiles.begin()->second.texture.get();
             check(sample_texture != nullptr, "sample castle tile texture should be non-null");
 
             if (sample_texture != nullptr) {

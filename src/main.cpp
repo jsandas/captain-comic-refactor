@@ -965,17 +965,8 @@ int main(int argc, const char* argv[]) {
         SDL_RenderSetViewport(renderer, nullptr);
 
         if (game_state == GameState::Paused && pause_sprite) {
-            const int pause_x_ega = 40;
-            const int pause_y_ega = 64;
-            const int pause_width_ega = 128;
-            const int pause_height_ega = 48;
-
-            SDL_Rect pause_rect = {
-                gameplay_frame_rect.x + static_cast<int>(pause_x_ega * letterbox_scale),
-                gameplay_frame_rect.y + static_cast<int>(pause_y_ega * letterbox_scale),
-                static_cast<int>(pause_width_ega * letterbox_scale),
-                static_cast<int>(pause_height_ega * letterbox_scale)};
-            SDL_RenderCopy(renderer, pause_sprite->texture.texture, nullptr, &pause_rect);
+            // Pause overlay: fixed EGA playfield placement (40, 64, 128x48).
+            g_graphics->render_sprite_in_ega_frame(*pause_sprite, 40, 64, 128, 48);
         }
 
         // Present

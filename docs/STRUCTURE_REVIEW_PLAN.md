@@ -141,8 +141,15 @@ Contents today:
   `update_hp_fill_tick()`), and `clear_gameplay_key_states()`. main.cpp wires a
   `GameSequenceContext` (non-owning pointers; `quit`/`game_state` shared by reference) —
   main.cpp went from 1,518 to ~965 lines.
-- [ ] **P3.** Move full-screen sequence texture loading/rendering into `GraphicsSystem`
+- [x] **P3.** Move full-screen sequence texture loading/rendering into `GraphicsSystem`
   helpers so main.cpp keeps no raw SDL.
+  ✅ Done — sequence sprite loading already went through the GraphicsSystem API (no SDL
+  types). The remaining raw render calls are now `GraphicsSystem::
+  render_sprite_in_ega_frame()` (EGA coords → letterboxed playfield frame): main.cpp uses
+  it for the pause overlay and game_sequences.cpp for the game-over sprite, removing the
+  duplicated letterbox-math + SDL_RenderCopy blocks. Main-loop frame machinery
+  (clear/viewport/scale/present/delay) necessarily stays raw SDL — that is main's job as
+  the SDL host.
 - [ ] Target: `main.cpp` becomes thin bootstrap + tick pipeline.
 
 ---
@@ -200,8 +207,15 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   persistence, and the high-scores screen) extracted; shared DOS text-mode helpers moved
   to `text_screen_utils.{h,cpp}`. title_sequence.cpp: 1,775 → ~855 lines, presentation
   only.
-- [ ] **P3.** Own textures/fonts with `std::unique_ptr` + custom deleters in `GraphicsSystem`;
+- [x] **P3.** Own textures/fonts with `std::unique_ptr` + custom deleters in `GraphicsSystem`;
   fix hand-deletion on error paths.
+  ✅ Done — `TextureInfo::texture` is `std::shared_ptr<SDL_Texture>` with the
+  `SDL_DestroyTexture` deleter attached at construction (TextureInfo is copied by value
+  into Sprite/Animation, so shared ownership is the correct shape); `debug_font` is a
+  `shared_ptr<TTF_Font>` with a `TTF_CloseFont` deleter; `enemy_sprites` owns
+  `SpriteAnimationData` by value. Every hand `SDL_DestroyTexture` loop, `new`/`delete`,
+  and the truncate-and-destroy dance in `load_enemy_sprite`/`load_animation_frames`/
+  `cleanup()`/`Tileset::cleanup()` is gone — error paths just return.
 - [x] **P3.** Replace `SDL_Keycode` in `cheats.h` with the project's own enum.
   ✅ Done — `cheats.h` no longer includes SDL: a self-authored `enum class CheatKey`
   (F1-F5, digits, Q/Backspace/Return/KpEnter) is the cheat input language; main.cpp's
@@ -209,8 +223,12 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
 - [x] **P3.** Make `UISystem` take `GraphicsSystem*` explicitly like every other module.
   ✅ Done — `UISystem(GraphicsSystem*)`; the member is used for sprite load/render
   (static helpers became members); no `g_graphics` reach-through in ui_system.cpp.
-- [ ] **P3.** Hide `TTF_Font*` behind a pimpl so `graphics.h` stops pulling `SDL_ttf.h` for
+- [x] **P3.** Hide `TTF_Font*` behind a pimpl so `graphics.h` stops pulling `SDL_ttf.h` for
   every consumer.
+  ✅ Done — graphics.h no longer includes SDL_ttf.h: `TTF_Font` is forward-declared and
+  held as `shared_ptr<TTF_Font>` (deleter attached where SDL_ttf.h is included,
+  graphics.cpp). Other TTF users (text_screen_utils, high_scores) include SDL_ttf.h
+  themselves.
 
 ---
 

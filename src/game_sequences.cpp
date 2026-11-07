@@ -281,17 +281,9 @@ static bool wait_for_new_keypress(const GameSequenceContext& context) {
 
 // Draw the game-over sprite over the letterboxed gameplay frame.
 static void draw_game_over_sprite(GameSequenceContext& context, const Sprite* game_over_sprite) {
-    SDL_Renderer* renderer = context.renderer;
-    const SDL_Rect gameplay_frame_rect = GraphicsSystem::compute_letterbox_rect(renderer);
-    const float letterbox_scale = static_cast<float>(gameplay_frame_rect.w) / EGA_WIDTH;
-
-    const SDL_Rect game_over_rect = {
-        gameplay_frame_rect.x + static_cast<int>(GAME_OVER_X_EGA * letterbox_scale),
-        gameplay_frame_rect.y + static_cast<int>(GAME_OVER_Y_EGA * letterbox_scale),
-        static_cast<int>(GAME_OVER_WIDTH_EGA * letterbox_scale),
-        static_cast<int>(GAME_OVER_HEIGHT_EGA * letterbox_scale)};
-    SDL_RenderCopy(renderer, game_over_sprite->texture.texture, nullptr, &game_over_rect);
-    SDL_RenderPresent(renderer);
+    context.graphics->render_sprite_in_ega_frame(*game_over_sprite, GAME_OVER_X_EGA,
+                                                 GAME_OVER_Y_EGA, GAME_OVER_WIDTH_EGA,
+                                                 GAME_OVER_HEIGHT_EGA, /*present=*/true);
 }
 
 void play_intro_beam_in_sequence(GameSequenceContext& context) {

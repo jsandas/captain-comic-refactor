@@ -2,10 +2,10 @@
 #define GRAPHICS_H
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_ttf.h>
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -14,6 +14,7 @@ constexpr int EGA_WIDTH = 320;
 constexpr int EGA_HEIGHT = 200;
 
 // Forward declarations
+struct TTF_Font;  // SDL_ttf.h is NOT included here: only graphics.cpp touches TTF.
 struct Texture;
 struct Tileset;
 struct SpriteSheet;
@@ -21,11 +22,23 @@ struct SpriteSheet;
 // Tile size in pixels (16x16 in original EGA)
 constexpr int TILE_SIZE = 16;
 
-// Texture rendering structure
+// Texture rendering structure.
+//
+// `texture` is a std::shared_ptr with the SDL_DestroyTexture custom deleter
+// attached at construction time (see graphics.cpp), so every TextureInfo
+// copy shares one owning reference and the texture is released automatically
+// when the last holder disappears. TextureInfo is copied by value into
+// Sprite/Animation structures, so shared ownership (not unique_ptr) is the
+// correct shape here; still, keep treat it as immutable - the SDL_Texture*
+// itself is never changed after load.
 struct TextureInfo {
-    SDL_Texture* texture = nullptr;
+    std::shared_ptr<SDL_Texture> texture;
     int width = 0;
     int height = 0;
+
+    // The raw pointer for SDL calls: implicit conversion does not exist for
+    // shared_ptr, call sites can use .get().
+    SDL_Texture* get() const { return texture.get(); }
 };
 
 // Tileset: contains multiple tile graphics (16x16 pixels each)
@@ -115,6 +128,13 @@ public:
     void render_sprite_top_clip_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                                        int full_height, int clip_height, bool flip_h = false);
 
+    // Render a full-screen-sequence sprite stretched over a sub-rect of the
+    // letterboxed 320x200 EGA playfield frame (pause overlay, game-over sprite, ...).
+    // `(x_ega, y_ega, w_ega, h_ega)` are EGA playfield coordinates; set
+    // `present` when this is the last draw of the frame.
+    void render_sprite_in_ega_frame(const Sprite& sprite, int x_ega, int y_ega, int w_ega,
+                                    int h_ega, bool present = false);
+
     // Text rendering
     void render_text(int screen_x, int screen_y, const std::string& text, SDL_Color color);
 
@@ -131,11 +151,13 @@ private:
     SDL_Renderer* renderer;
     bool img_inited;
     bool ttf_inited;
-    TTF_Font* debug_font;  // Font for debug overlay text
+    // Shared_ptr with a TTF_CloseFont deleter attached at construction
+    // (graphics.cpp): the header stays SDL_ttf-free.
+    std::shared_ptr<TTF_Font> debug_font;  // Font for debug overlay text
     std::map<std::string, Tileset> tilesets;
     std::map<std::string, bool> tileset_blackout;
     std::map<std::string, Sprite> sprites;
-    std::map<std::string, SpriteAnimationData*> enemy_sprites;  // Enemy sprite animation data
+    std::map<std::string, SpriteAnimationData> enemy_sprites;  // Owns the loaded data
 
     // Helper functions
     TextureInfo load_png(const std::string& filepath);
