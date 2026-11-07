@@ -62,7 +62,7 @@ struct GameSequenceContext {
     ActorSystem* actors = nullptr;           // item/enemy rendering inside beam frames
     Tileset* tileset = nullptr;              // current level tileset cache
     Animation* current_animation = nullptr;  // player animation state (mutable frame cursor)
-    const Sprite* const* materialize_sprites = nullptr;  // beam-in/out frames
+    Sprite* const* materialize_sprites = nullptr;  // beam-in/out frames
     size_t materialize_sprite_count = 0;
     bool materialize_sprites_loaded = true;  // false when beam frames failed to load
     Sprite* game_over_sprite = nullptr;
