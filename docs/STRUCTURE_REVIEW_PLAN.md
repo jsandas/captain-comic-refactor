@@ -20,7 +20,9 @@ tools/     Python asset extraction (extract_assets.py)
 
 - Module *boundaries* are sensible: `physics`, `doors`, `actors`, `level_loader`, `audio`,
   `ui_system`, `cheats` each have a header and a cpp — plus the P2 extractions
-  `game_sequences`, `player_teleport`, `input_bindings`, `high_scores`, `text_screen_utils`.
+  `game_sequences`, `player_teleport`, `input_bindings`, `high_scores`, `text_screen_utils`,
+  and the level-data split (`level_format.h` PT/SHP model, `level_enums.h` gameplay
+  constants, `level.h` data exports).
 - `comic_core` as a static library shared by the executable **and** the tests is the right instinct.
 - Tile data is auto-generated (`level_tiles.cpp`), and level metadata is hand-authored
   designated-initializer tables (`level_data.cpp`, from `reference/R3_levels.asm`).
@@ -174,8 +176,18 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   `ActorSystem::comic_has_door_key` member was removed; collecting a door key writes the
   global, which doors, HUD, and sequences read directly. Remaining item flags stay on
   ActorSystem until §4 P3 (below).
-- [ ] **P3.** Make `ActorSystem` data private; expose behavior (`take_damage()`,
+- [x] **P3.** Make `ActorSystem` data private; expose behavior (`take_damage()`,
   `collect_item()`, `get_jump_power()`, …) instead of fields.
+  ✅ Done — player inventory (`comic_firepower`, `comic_has_corkscrew/boots/lantern/
+  teleport_wand/gems/crown/gold`, `comic_num_treasures`) moved out of ActorSystem into
+  game_state.h/.cpp globals next to `comic_has_door_key` — one home for all player state;
+  `apply_item_effect()` writes them. ActorSystem's remaining data (enemies, fireballs,
+  sprites, meter, timers) is all `private:` now; external reads go through behavior
+  accessors: `get_enemies()`, `get_fireballs()`, `get_fireball_meter()`, `get_jump_power()`,
+  `is_tile_solid()`, plus `apply_item_effect()` (marked public-for-testing) and a test-only
+  `set_fireball_meter_for_test()`. `take_damage`/`collect_item` were not added as separate
+  entry points: damage and collection happen inside the private tick pipeline, and no
+  caller needs to invoke them directly.
 
 ---
 

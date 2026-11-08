@@ -31,6 +31,10 @@ static void reset_actor_state(const ActorSystem& actor_system) {
         fireball.x = FIREBALL_DEAD;
         fireball.y = FIREBALL_DEAD;
     }
+
+    // Player inventory now lives in game_state.h globals; actor tests assume a
+    // fresh zeroed inventory exactly like a fresh ActorSystem used to provide.
+    reset_item_flags();
 }
 
 REGISTER_TEST(test_actor_spawn_one_per_tick) {
@@ -310,8 +314,8 @@ REGISTER_TEST(test_fireball_meter_depletion_timing) {
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
-    actor_system.fireball_meter = 3;
+    comic_firepower = 1;
+    actor_system.set_fireball_meter_for_test(3);
 
     comic_x = 10;
     comic_y = 10;
@@ -319,15 +323,15 @@ REGISTER_TEST(test_fireball_meter_depletion_timing) {
     camera_x = 0;
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 2,
+    check(actor_system.get_fireball_meter() == 2,
           "fireball_meter: should decrement on first firing tick");
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 2,
+    check(actor_system.get_fireball_meter() == 2,
           "fireball_meter: should not decrement on second firing tick");
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 1,
+    check(actor_system.get_fireball_meter() == 1,
           "fireball_meter: should decrement on third firing tick");
 }
 
@@ -344,10 +348,10 @@ REGISTER_TEST(test_fireball_meter_recharge_timing) {
 
     // Advance once so the counter reaches the recharge phase.
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 0);
-    actor_system.fireball_meter = 10;
+    actor_system.set_fireball_meter_for_test(10);
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 0);
-    check(actor_system.fireball_meter == 11,
+    check(actor_system.get_fireball_meter() == 11,
           "fireball_meter: should recharge every other tick when idle");
 }
 
@@ -357,7 +361,7 @@ REGISTER_TEST(test_fireball_offscreen_deactivates) {
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
+    comic_firepower = 1;
     comic_x = 10;
     comic_y = 10;
     comic_facing = COMIC_FACING_LEFT;
@@ -382,7 +386,7 @@ REGISTER_TEST(test_fireball_collision_sets_white_spark) {
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
+    comic_firepower = 1;
     comic_x = 10;
     comic_y = 0;
     comic_facing = COMIC_FACING_RIGHT;
@@ -416,8 +420,8 @@ REGISTER_TEST(test_fireball_corkscrew_motion) {
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
-    actor_system.comic_has_corkscrew = 1;
+    comic_firepower = 1;
+    comic_has_corkscrew = 1;
     comic_x = 10;
     comic_y = 10;
     comic_facing = COMIC_FACING_RIGHT;
@@ -446,22 +450,21 @@ REGISTER_TEST(test_item_collection_tracking) {
     actor_system.initialize();
 
     // Initially, no items collected
-    check(actor_system.comic_firepower == 0, "item_collection: firepower should start at 0");
-    check(actor_system.comic_has_boots == 0, "item_collection: should not have boots initially");
+    check(comic_firepower == 0, "item_collection: firepower should start at 0");
+    check(comic_has_boots == 0, "item_collection: should not have boots initially");
 
     // Simulate collecting Blastola Cola
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 1,
-          "item_collection: Blastola Cola should increase firepower to 1");
+    check(comic_firepower == 1, "item_collection: Blastola Cola should increase firepower to 1");
 
     // Collect second Blastola Cola
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 2,
+    check(comic_firepower == 2,
           "item_collection: second Blastola Cola should increase firepower to 2");
 
     // Collect Boots
     actor_system.apply_item_effect(ITEM_BOOTS);
-    check(actor_system.comic_has_boots == 1, "item_collection: should have boots after collection");
+    check(comic_has_boots == 1, "item_collection: should have boots after collection");
 }
 
 REGISTER_TEST(test_actor_door_key_sync) {
@@ -544,17 +547,17 @@ REGISTER_TEST(test_item_blastola_cola_firepower) {
     actor_system.initialize();
 
     // Initially no firepower
-    check(actor_system.comic_firepower == 0, "blastola_cola: firepower should start at 0");
+    check(comic_firepower == 0, "blastola_cola: firepower should start at 0");
 
     // Collect 5 Blastola Colas (max firepower)
     for (int i = 0; i < 5; i++) {
         actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
     }
-    check(actor_system.comic_firepower == 5, "blastola_cola: should reach max firepower of 5");
+    check(comic_firepower == 5, "blastola_cola: should reach max firepower of 5");
 
     // Try to collect a 6th (should not exceed max)
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 5, "blastola_cola: firepower should not exceed 5");
+    check(comic_firepower == 5, "blastola_cola: firepower should not exceed 5");
 }
 
 REGISTER_TEST(test_item_boots_jump_power) {
@@ -581,11 +584,10 @@ REGISTER_TEST(test_item_corkscrew_flag) {
     ActorSystem actor_system;
     actor_system.initialize();
 
-    check(actor_system.comic_has_corkscrew == 0, "corkscrew: should not have corkscrew initially");
+    check(comic_has_corkscrew == 0, "corkscrew: should not have corkscrew initially");
 
     actor_system.apply_item_effect(ITEM_CORKSCREW);
-    check(actor_system.comic_has_corkscrew == 1,
-          "corkscrew: should have corkscrew after collection");
+    check(comic_has_corkscrew == 1, "corkscrew: should have corkscrew after collection");
 }
 
 REGISTER_TEST(test_item_treasure_counting) {
@@ -594,33 +596,29 @@ REGISTER_TEST(test_item_treasure_counting) {
     actor_system.initialize();
 
     // Initially no treasures
-    check(actor_system.comic_num_treasures == 0, "treasures: treasure count should start at 0");
-    check(actor_system.comic_has_gems == 0, "treasures: should not have gems initially");
-    check(actor_system.comic_has_crown == 0, "treasures: should not have crown initially");
-    check(actor_system.comic_has_gold == 0, "treasures: should not have gold initially");
+    check(comic_num_treasures == 0, "treasures: treasure count should start at 0");
+    check(comic_has_gems == 0, "treasures: should not have gems initially");
+    check(comic_has_crown == 0, "treasures: should not have crown initially");
+    check(comic_has_gold == 0, "treasures: should not have gold initially");
 
     // Collect Gems
     actor_system.apply_item_effect(ITEM_GEMS);
-    check(actor_system.comic_has_gems == 1, "treasures: should have gems after collection");
-    check(actor_system.comic_num_treasures == 1,
-          "treasures: treasure count should be 1 after gems");
+    check(comic_has_gems == 1, "treasures: should have gems after collection");
+    check(comic_num_treasures == 1, "treasures: treasure count should be 1 after gems");
 
     // Collect Crown
     actor_system.apply_item_effect(ITEM_CROWN);
-    check(actor_system.comic_has_crown == 1, "treasures: should have crown after collection");
-    check(actor_system.comic_num_treasures == 2,
-          "treasures: treasure count should be 2 after crown");
+    check(comic_has_crown == 1, "treasures: should have crown after collection");
+    check(comic_num_treasures == 2, "treasures: treasure count should be 2 after crown");
 
     // Collect Gold
     actor_system.apply_item_effect(ITEM_GOLD);
-    check(actor_system.comic_has_gold == 1, "treasures: should have gold after collection");
-    check(actor_system.comic_num_treasures == 3,
-          "treasures: treasure count should be 3 after gold");
+    check(comic_has_gold == 1, "treasures: should have gold after collection");
+    check(comic_num_treasures == 3, "treasures: treasure count should be 3 after gold");
 
     // Collecting same treasure again should not increase count
     actor_system.apply_item_effect(ITEM_GEMS);
-    check(actor_system.comic_num_treasures == 3,
-          "treasures: duplicate collection should not increase count");
+    check(comic_num_treasures == 3, "treasures: duplicate collection should not increase count");
 }
 
 REGISTER_TEST(test_item_special_items) {
@@ -634,17 +632,15 @@ REGISTER_TEST(test_item_special_items) {
     check(comic_has_door_key == 1, "special_items: should have door key after collection");
 
     // Teleport Wand
-    check(actor_system.comic_has_teleport_wand == 0,
-          "special_items: should not have teleport wand initially");
+    check(comic_has_teleport_wand == 0, "special_items: should not have teleport wand initially");
     actor_system.apply_item_effect(ITEM_TELEPORT_WAND);
-    check(actor_system.comic_has_teleport_wand == 1,
+    check(comic_has_teleport_wand == 1,
           "special_items: should have teleport wand after collection");
 
     // Lantern
-    check(actor_system.comic_has_lantern == 0, "special_items: should not have lantern initially");
+    check(comic_has_lantern == 0, "special_items: should not have lantern initially");
     actor_system.apply_item_effect(ITEM_LANTERN);
-    check(actor_system.comic_has_lantern == 1,
-          "special_items: should have lantern after collection");
+    check(comic_has_lantern == 1, "special_items: should have lantern after collection");
 
     // Shield (not full HP): schedule refill to MAX_HP
     comic_num_lives = 2;

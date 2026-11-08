@@ -34,6 +34,7 @@ extern int failures;
 void check(bool condition, const std::string& message);
 Animation make_animation(const std::vector<int>& durations, bool looping);
 void reset_physics_state();
+void reset_item_flags();  // Zero player inventory globals (comic_has_*/comic_num_treasures/...)
 void reset_door_state();
 level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level,
                                      uint8_t target_stage);

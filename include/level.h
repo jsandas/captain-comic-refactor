@@ -13,11 +13,11 @@
  * Including level.h gives you everything, exactly as before the split.
  */
 
-#include "level_enums.h"
-#include "level_format.h"
-
 #include <cstdint>
 #include <string>
+
+#include "level_enums.h"
+#include "level_format.h"
 
 /* Array of pointers to all 8 levels */
 extern const level_t* const level_data_pointers[8];

@@ -73,9 +73,19 @@ extern uint8_t previous_key_state_teleport;  // Track previous teleport key stat
 extern int camera_x;  // Left edge of the visible playfield, in game units
 
 // --- Items / lives / HP / score ---
-// Note: Firepower, other items, and treasures are managed by ActorSystem
-// (authoritative state, see include/actors.h).
+// Player inventory flags live here once (like comic_has_door_key): collected
+// by the item system in actors.cpp (apply_item_effect), read by doors,
+// HUD, and sequences. ActorSystem carries only non-player bookkeeping.
 extern uint8_t comic_has_door_key;         // 1 if player has door key, 0 otherwise
+extern uint8_t comic_firepower;            // 0-5: number of fireball slots available
+extern uint8_t comic_has_corkscrew;        // 1 if Comic has the Corkscrew item
+extern uint8_t comic_has_boots;            // 1 if Comic has Boots (increased jump power)
+extern uint8_t comic_has_lantern;          // 1 if Comic has Lantern (castle lighting)
+extern uint8_t comic_has_teleport_wand;    // 1 if Comic has Teleport Wand
+extern uint8_t comic_has_gems;             // 1 if Comic collected Gems
+extern uint8_t comic_has_crown;            // 1 if Comic collected Crown
+extern uint8_t comic_has_gold;             // 1 if Comic collected Gold
+extern uint8_t comic_num_treasures;        // Count of treasures collected (0-3)
 extern uint8_t comic_num_lives;            // Lives remaining (counts up 0..5, then -1)
 extern uint8_t lives_sequence_counter;     // Lives count-up sequence: award 5, then -1
 extern uint8_t lives_sequence_delay;       // Delay counter for lives animation (1 tick per award)

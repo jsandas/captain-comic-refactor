@@ -102,8 +102,8 @@ public:
     /* Initialize the actor system */
     static bool initialize();
 
-    /* Update all actors for one game tick. Parameters use player_* / cam_x names
-     * because the identically-named globals live in game_state.h. */
+    // Update all actors for one game tick. Parameters use player_* / cam_x names
+    // because the identically-named globals live in game_state.h.
     void update(uint8_t player_x, uint8_t player_y, uint8_t player_facing, const uint8_t* tiles,
                 int cam_x, uint8_t fire_key = 0);
 
@@ -125,21 +125,12 @@ public:
     /* Reset fireballs (called on stage load) */
     void reset_fireballs();
 
-    /* Player firepower and powerup flags (set by item system) */
-    uint8_t comic_firepower;     /* 0-5: number of fireball slots available */
-    uint8_t comic_has_corkscrew; /* 1 if Comic has the Corkscrew item */
-    uint8_t fireball_meter;      /* Current fireball meter (0–MAX_FIREBALL_METER) */
+    /* Player state queries (the underlying flags are game_state.h globals) */
+    uint8_t get_fireball_meter() const { return fireball_meter; }  // 0–MAX_FIREBALL_METER
 
-    /* Additional item-related player flags */
-    uint8_t comic_has_boots;   /* 1 if Comic has Boots (increased jump power) */
-    uint8_t comic_has_lantern; /* 1 if Comic has Lantern (castle lighting) */
-    /* Door key flag intentionally NOT here: it lives once, in game_state.h
-     * (comic_has_door_key), read by doors, HUD, and sequences alike. */
-    uint8_t comic_has_teleport_wand; /* 1 if Comic has Teleport Wand */
-    uint8_t comic_has_gems;          /* 1 if Comic collected Gems */
-    uint8_t comic_has_crown;         /* 1 if Comic collected Crown */
-    uint8_t comic_has_gold;          /* 1 if Comic collected Gold */
-    uint8_t comic_num_treasures;     /* Count of treasures collected (0-3) */
+    /* Test-only meter control (production state is driven by update()); the
+     * meter itself is private because only the tick pipeline mutates it. */
+    void set_fireball_meter_for_test(uint8_t value) { fireball_meter = value; }
 
     /* Get current jump power based on boots status */
     int get_jump_power() const;
@@ -169,7 +160,10 @@ public:
     /* Get tile at coordinates */
     uint8_t get_tile_at(uint8_t x, uint8_t y) const;
 
-protected:
+private:
+    /* Fireball meter (0–MAX_FIREBALL_METER); read-only via get_fireball_meter() */
+    uint8_t fireball_meter;
+
     /* Enemy array (max 4 enemies per stage) */
     std::vector<enemy_t> enemies;
 

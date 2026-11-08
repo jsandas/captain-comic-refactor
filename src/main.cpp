@@ -187,7 +187,7 @@ int main(int argc, const char* argv[]) {
     ActorSystem actor_system;
     actor_system.initialize();
     if (debug_mode) {
-        actor_system.comic_firepower = 3;  // Start with 3 fireball slots in debug mode for testing
+        comic_firepower = 3;  // Player inventory is single-sourced in game_state.h
     }
 
     // Make actor system accessible to cheat system
@@ -607,12 +607,12 @@ int main(int argc, const char* argv[]) {
                 // Process teleport input once per tick (edge-triggered)
                 // Teleport activation happens AFTER physics resolves, not before
                 if (!comic_is_falling_or_jumping && !comic_is_teleporting) {
-                    process_teleport_input(actor_system.comic_has_teleport_wand != 0);
+                    process_teleport_input(comic_has_teleport_wand != 0);
                 } else {
                     previous_key_state_teleport = key_state_teleport;
                 }
 
-                if (!beam_out_sequence_played && actor_system.comic_num_treasures >= 3) {
+                if (!beam_out_sequence_played && comic_num_treasures >= 3) {
                     beam_out_sequence_played = true;
                     win_counter = 20;
                 }
@@ -955,12 +955,11 @@ int main(int argc, const char* argv[]) {
         // Draw in the same 320x200 letterboxed coordinate space as SYS003.
         SDL_RenderSetViewport(renderer, &gameplay_frame_rect);
         SDL_RenderSetScale(renderer, letterbox_scale, letterbox_scale);
-        ui_system.render_hud(score_bytes, comic_num_lives, comic_hp, actor_system.fireball_meter,
-                             actor_system.comic_firepower, actor_system.comic_has_corkscrew != 0,
-                             comic_has_door_key != 0, actor_system.comic_has_teleport_wand != 0,
-                             actor_system.comic_has_lantern != 0, actor_system.comic_has_gems != 0,
-                             actor_system.comic_has_crown != 0, actor_system.comic_has_gold != 0,
-                             comic_jump_power);
+        ui_system.render_hud(
+            score_bytes, comic_num_lives, comic_hp, actor_system.get_fireball_meter(),
+            comic_firepower, comic_has_corkscrew != 0, comic_has_door_key != 0,
+            comic_has_teleport_wand != 0, comic_has_lantern != 0, comic_has_gems != 0,
+            comic_has_crown != 0, comic_has_gold != 0, comic_jump_power);
         SDL_RenderSetScale(renderer, 1.0f, 1.0f);
         SDL_RenderSetViewport(renderer, nullptr);
 

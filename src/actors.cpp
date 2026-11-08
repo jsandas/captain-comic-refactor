@@ -79,17 +79,10 @@ void award_extra_life() {
 /**
  * ActorSystem constructor
  */
+// Player inventory flags (comic_firepower, comic_has_corkscrew, ...) live
+// once, in game_state.h/.cpp; apply_item_effect writes those globals.
 ActorSystem::ActorSystem()
-    : comic_firepower(0),
-      comic_has_corkscrew(0),
-      fireball_meter(0),
-      comic_has_boots(0),
-      comic_has_lantern(0),
-      comic_has_teleport_wand(0),
-      comic_has_gems(0),
-      comic_has_crown(0),
-      comic_has_gold(0),
-      comic_num_treasures(0),
+    : fireball_meter(0),
       enemies(MAX_NUM_ENEMIES),
       fireballs(MAX_NUM_FIREBALLS),
       fireball_meter_counter(FIREBALL_METER_COUNTER_INIT),
