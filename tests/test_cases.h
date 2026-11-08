@@ -31,6 +31,6 @@ bool register_test(const std::string& name, void (*fn)());
 #define REGISTER_TEST(test_fn)                                                                    \
     static void test_fn();                                                                        \
     [[maybe_unused]] static const bool test_fn##_registered_ = register_test(#test_fn, &test_fn); \
-    void test_fn()
+    static void test_fn()
 
 #endif  // TEST_CASES_H

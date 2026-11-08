@@ -54,6 +54,10 @@ struct SdlFontHandle {
 namespace {
 
 std::shared_ptr<SdlFontHandle> make_font_handle(TTF_Font* font) {
+    if (font == nullptr) {
+        return nullptr;
+    }
+
     return std::shared_ptr<SdlFontHandle>(new SdlFontHandle{font}, [](SdlFontHandle* handle) {
         if (handle) {
             close_ttf_font(handle->font);

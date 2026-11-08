@@ -1,6 +1,7 @@
 #ifndef GAME_CONSTANTS_H
 #define GAME_CONSTANTS_H
 
+#include <cstdint>
 /**
  * game_constants.h - Shared gameplay limits
  *
