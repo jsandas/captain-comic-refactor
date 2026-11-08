@@ -3,8 +3,9 @@
 quality: cppcheck format-check
 
 cppcheck:
-	@docker run --name cppcheck_container --rm -v ${PWD}:/workspace \
+	@docker run --name cppcheck_container--rm -v ${PWD}:/workspace \
 		--workdir /workspace \
+		--pull always \
 		alpine:edge \
 		sh -c "apk add --no-cache cppcheck > /dev/null 2>&1; \
 		cppcheck --enable=all \
