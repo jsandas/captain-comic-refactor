@@ -96,8 +96,8 @@ void begin_teleport() {
     play_game_sound(GameSound::TELEPORT);
 }
 
-void process_teleport_input(bool comic_has_teleport_wand) {
-    if (key_state_teleport && !previous_key_state_teleport && comic_has_teleport_wand) {
+void process_teleport_input(bool player_has_teleport_wand) {
+    if (key_state_teleport && !previous_key_state_teleport && player_has_teleport_wand) {
         begin_teleport();
     }
 

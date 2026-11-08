@@ -251,7 +251,7 @@ int main(int argc, const char* argv[]) {
     if (!g_graphics->load_sprite("pause", "")) {
         std::cerr << "Warning: Could not load pause sprite (sprite-pause.png)." << std::endl;
     }
-    Sprite* pause_sprite = g_graphics->get_sprite("pause", "");
+    const Sprite* pause_sprite = g_graphics->get_sprite("pause", "");
 
     if (!g_graphics->load_sprite("game_over", "")) {
         std::cerr << "Warning: Could not load game-over sprite (sprite-game_over.png)."
