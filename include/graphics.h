@@ -14,7 +14,9 @@ constexpr int EGA_WIDTH = 320;
 constexpr int EGA_HEIGHT = 200;
 
 // Forward declarations
-struct TTF_Font;  // SDL_ttf.h is NOT included here: only graphics.cpp touches TTF.
+struct SdlFontHandle;  // Opaque pimpl for the debug TTF font (defined in graphics.cpp);
+                       // SDL_ttf.h is NOT included here and its type spells differ between
+                       // SDL2 versions (_TTF_Font vs TTF_Font), so no SDL font names here.
 struct Texture;
 struct Tileset;
 struct SpriteSheet;
@@ -151,9 +153,10 @@ private:
     SDL_Renderer* renderer;
     bool img_inited;
     bool ttf_inited;
-    // Shared_ptr with a TTF_CloseFont deleter attached at construction
-    // (graphics.cpp): the header stays SDL_ttf-free.
-    std::shared_ptr<TTF_Font> debug_font;  // Font for debug overlay text
+    // Opaque shared handle to the debug font (its TTF_Font is owned inside
+    // the pimpl defined in graphics.cpp, attached with a TTF_CloseFont
+    // deleter); the header stays SDL_ttf-free on every SDL2 version.
+    std::shared_ptr<SdlFontHandle> debug_font;
     std::map<std::string, Tileset> tilesets;
     std::map<std::string, bool> tileset_blackout;
     std::map<std::string, Sprite> sprites;

@@ -43,6 +43,27 @@ std::shared_ptr<SDL_Texture> make_texture_shared(SDL_Texture* texture) {
 
 }  // namespace
 
+// The header-side SdlFontHandle forward declaration is satisfied here (global
+// scope, same type): this owns one opened TTF_Font and releases it with
+// TTF_CloseFont, so graphics.h never needs SDL's font type spelling (which
+// differs between SDL2 versions).
+struct SdlFontHandle {
+    TTF_Font* font = nullptr;
+};
+
+namespace {
+
+std::shared_ptr<SdlFontHandle> make_font_handle(TTF_Font* font) {
+    return std::shared_ptr<SdlFontHandle>(new SdlFontHandle{font}, [](SdlFontHandle* handle) {
+        if (handle) {
+            close_ttf_font(handle->font);
+            delete handle;
+        }
+    });
+}
+
+}  // namespace
+
 GraphicsSystem::GraphicsSystem(SDL_Renderer* renderer)
     : renderer(renderer), img_inited(false), ttf_inited(false) {}
 
@@ -85,10 +106,9 @@ bool GraphicsSystem::initialize() {
 
     const int debug_font_size = 12;
     for (const auto& font_path : font_candidates) {
-        // Attach the custom TTF_CloseFont deleter here so every copy of
-        // debug_font (and the last one disappearing) releases the font.
-        debug_font = std::shared_ptr<TTF_Font>(TTF_OpenFont(font_path.c_str(), debug_font_size),
-                                               close_ttf_font);
+        // Open the debug font wrapped in the opaque pimpl handle (custom
+        // TTF_CloseFont deleter), keeping SDL_ttf spellings out of graphics.h.
+        debug_font = make_font_handle(TTF_OpenFont(font_path.c_str(), debug_font_size));
         if (debug_font != nullptr) {
             break;
         }
@@ -665,7 +685,7 @@ void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& 
         return;  // Font not available
     }
 
-    SDL_Surface* surface = TTF_RenderText_Solid(debug_font.get(), text.c_str(), color);
+    SDL_Surface* surface = TTF_RenderText_Solid(debug_font->font, text.c_str(), color);
     if (surface == nullptr) {
         return;
     }
