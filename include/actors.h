@@ -132,8 +132,9 @@ public:
      * meter itself is private because only the tick pipeline mutates it. */
     void set_fireball_meter_for_test(uint8_t value) { fireball_meter = value; }
 
-    /* Get current jump power based on boots status */
-    int get_jump_power() const;
+    /* Get current jump power based on boots status.
+     * Static: reads only the game_state.h inventory globals. */
+    static int get_jump_power();
 
     /* Load item sprites from assets (call once after GraphicsSystem is ready) */
     bool load_item_sprites(GraphicsSystem* graphics_system);
@@ -141,8 +142,9 @@ public:
     /* Render the current stage's item if not yet collected */
     void render_item(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
 
-    /* Apply item effect (public for testing) */
-    void apply_item_effect(uint8_t item_type);
+    /* Apply item effect (public for testing).
+     * Static: writes only the game_state.h inventory globals. */
+    static void apply_item_effect(uint8_t item_type);
 
     /* Reset all enemies (called when loading a new stage) */
     void reset_for_stage();

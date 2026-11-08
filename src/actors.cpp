@@ -1535,9 +1535,10 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
  * ============================================================================ */
 
 /**
- * Get current jump power based on boots status
+ * Get current jump power based on boots status.
+ * Static: reads only the game_state.h inventory globals.
  */
-int ActorSystem::get_jump_power() const {
+int ActorSystem::get_jump_power() {
     return comic_has_boots ? JUMP_POWER_WITH_BOOTS : JUMP_POWER_DEFAULT;
 }
 
@@ -1662,6 +1663,7 @@ void ActorSystem::collect_item() {
 
 /**
  * Apply the effect of collecting a specific item type.
+ * Static: writes only the game_state.h inventory globals.
  */
 void ActorSystem::apply_item_effect(uint8_t item_type) {
     switch (item_type) {
