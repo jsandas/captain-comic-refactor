@@ -20,7 +20,9 @@ tools/     Python asset extraction (extract_assets.py)
 
 - Module *boundaries* are sensible: `physics`, `doors`, `actors`, `level_loader`, `audio`,
   `ui_system`, `cheats` each have a header and a cpp — plus the P2 extractions
-  `game_sequences`, `player_teleport`, `input_bindings`, `high_scores`, `text_screen_utils`.
+  `game_sequences`, `player_teleport`, `input_bindings`, `high_scores`, `text_screen_utils`,
+  and the level-data split (`level_format.h` PT/SHP model, `level_enums.h` gameplay
+  constants, `level.h` data exports).
 - `comic_core` as a static library shared by the executable **and** the tests is the right instinct.
 - Tile data is auto-generated (`level_tiles.cpp`), and level metadata is hand-authored
   designated-initializer tables (`level_data.cpp`, from `reference/R3_levels.asm`).
@@ -141,8 +143,15 @@ Contents today:
   `update_hp_fill_tick()`), and `clear_gameplay_key_states()`. main.cpp wires a
   `GameSequenceContext` (non-owning pointers; `quit`/`game_state` shared by reference) —
   main.cpp went from 1,518 to ~965 lines.
-- [ ] **P3.** Move full-screen sequence texture loading/rendering into `GraphicsSystem`
+- [x] **P3.** Move full-screen sequence texture loading/rendering into `GraphicsSystem`
   helpers so main.cpp keeps no raw SDL.
+  ✅ Done — sequence sprite loading already went through the GraphicsSystem API (no SDL
+  types). The remaining raw render calls are now `GraphicsSystem::
+  render_sprite_in_ega_frame()` (EGA coords → letterboxed playfield frame): main.cpp uses
+  it for the pause overlay and game_sequences.cpp for the game-over sprite, removing the
+  duplicated letterbox-math + SDL_RenderCopy blocks. Main-loop frame machinery
+  (clear/viewport/scale/present/delay) necessarily stays raw SDL — that is main's job as
+  the SDL host.
 - [ ] Target: `main.cpp` becomes thin bootstrap + tick pipeline.
 
 ---
@@ -167,8 +176,21 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   `ActorSystem::comic_has_door_key` member was removed; collecting a door key writes the
   global, which doors, HUD, and sequences read directly. Remaining item flags stay on
   ActorSystem until §4 P3 (below).
-- [ ] **P3.** Make `ActorSystem` data private; expose behavior (`take_damage()`,
+- [x] **P3.** Make `ActorSystem` data private; expose behavior (`take_damage()`,
   `collect_item()`, `get_jump_power()`, …) instead of fields.
+  ✅ Done — player inventory (`comic_firepower`, `comic_has_corkscrew/boots/lantern/
+  teleport_wand/gems/crown/gold`, `comic_num_treasures`) moved out of ActorSystem into
+  game_state.h/.cpp globals next to `comic_has_door_key` — one home for all player state;
+  `apply_item_effect()` writes them. ActorSystem's remaining data (enemies, fireballs,
+  sprites, meter, timers) is all `private:` now; external reads go through behavior
+  accessors: `get_enemies()`, `get_fireballs()`, `get_fireball_meter()`, `get_jump_power()`,
+  `is_tile_solid()`, plus `apply_item_effect()` (marked public-for-testing) and a test-only
+  `set_fireball_meter_for_test()`. `take_damage`/`collect_item` were not added as separate
+  entry points: damage and collection happen inside the private tick pipeline, and no
+  caller needs to invoke them directly.
+  Plus: new self-registered regression test
+  `test_enemy_leap_negative_velocity_floor_div` pins the LEAP ascent sar-delta sequence
+  (fails 4/4 against a truncating `/ 8`, passes with the floor-division fix).
 
 ---
 
@@ -200,12 +222,28 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   persistence, and the high-scores screen) extracted; shared DOS text-mode helpers moved
   to `text_screen_utils.{h,cpp}`. title_sequence.cpp: 1,775 → ~855 lines, presentation
   only.
-- [ ] **P3.** Own textures/fonts with `std::unique_ptr` + custom deleters in `GraphicsSystem`;
+- [x] **P3.** Own textures/fonts with `std::unique_ptr` + custom deleters in `GraphicsSystem`;
   fix hand-deletion on error paths.
-- [ ] **P3.** Replace `SDL_Keycode` in `cheats.h` with the project's own enum.
-- [ ] **P3.** Make `UISystem` take `GraphicsSystem*` explicitly like every other module.
-- [ ] **P3.** Hide `TTF_Font*` behind a pimpl so `graphics.h` stops pulling `SDL_ttf.h` for
+  ✅ Done — `TextureInfo::texture` is `std::shared_ptr<SDL_Texture>` with the
+  `SDL_DestroyTexture` deleter attached at construction (TextureInfo is copied by value
+  into Sprite/Animation, so shared ownership is the correct shape); `debug_font` is a
+  `shared_ptr<TTF_Font>` with a `TTF_CloseFont` deleter; `enemy_sprites` owns
+  `SpriteAnimationData` by value. Every hand `SDL_DestroyTexture` loop, `new`/`delete`,
+  and the truncate-and-destroy dance in `load_enemy_sprite`/`load_animation_frames`/
+  `cleanup()`/`Tileset::cleanup()` is gone — error paths just return.
+- [x] **P3.** Replace `SDL_Keycode` in `cheats.h` with the project's own enum.
+  ✅ Done — `cheats.h` no longer includes SDL: a self-authored `enum class CheatKey`
+  (F1-F5, digits, Q/Backspace/Return/KpEnter) is the cheat input language; main.cpp's
+  SDL event loop translates with a local `cheat_key_from_sdl()` helper.
+- [x] **P3.** Make `UISystem` take `GraphicsSystem*` explicitly like every other module.
+  ✅ Done — `UISystem(GraphicsSystem*)`; the member is used for sprite load/render
+  (static helpers became members); no `g_graphics` reach-through in ui_system.cpp.
+- [x] **P3.** Hide `TTF_Font*` behind a pimpl so `graphics.h` stops pulling `SDL_ttf.h` for
   every consumer.
+  ✅ Done — graphics.h no longer includes SDL_ttf.h: `TTF_Font` is forward-declared and
+  held as `shared_ptr<TTF_Font>` (deleter attached where SDL_ttf.h is included,
+  graphics.cpp). Other TTF users (text_screen_utils, high_scores) include SDL_ttf.h
+  themselves.
 
 ---
 
@@ -232,8 +270,10 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
 - [x] **P2.** Compile `comic_core` uniformly as C++20; drop the MSVC-only special case.
   ✅ Done — the project standard is now C++20 for all targets (`CMAKE_CXX_STANDARD 20`);
   the MSVC-only per-target override was removed.
-- [ ] **P3.** Move test files to `target_sources()` per directory; keep the explicit
+- [x] **P3.** Move test files to `target_sources()` per directory; keep the explicit
   source list per module rather than a flat hardcoded list.
+  ✅ Done — `comic_core` and `comic_tests` are registered with `target_sources()`
+  grouped by module; adding a module adds one line next to its siblings.
 
 ---
 
@@ -249,8 +289,12 @@ per-test CTest registrations are a nice touch. Friction points:
 
 ### Plan
 
-- [ ] **P3.** Add a self-registering macro (`REGISTER_TEST(test_name)`) so registering a test
+- [x] **P3.** Add a self-registering macro (`REGISTER_TEST(test_name)`) so registering a test
   is a one-line, one-file change.
+  ✅ Done — `REGISTER_TEST(test_fn)` in `test_cases.h` defines the function
+  and appends it to the registry at static-init time; test_cases.h's prototype list and
+  test_main.cpp's hand-maintained registry are gone (81 tests registered, identical filter
+  names).
 - [ ] Unblocks automatically once §2 lands.
 
 ---
@@ -267,11 +311,17 @@ per-test CTest registrations are a nice touch. Friction points:
 
 ### Plan
 
-- [ ] **P3.** Add `game_constants.h` (MAX_HP, lives limits, …); slim `ui_system.h`.
+- [x] **P3.** Add `game_constants.h` (MAX_HP, lives limits, …); slim `ui_system.h`.
+  ✅ Done — `game_constants.h` holds MAX_HP and MAX_NUM_LIVES (hoisted from
+  `award_extra_life`); `ui_system.h` includes it instead of `physics.h`.
 - [ ] **P3.** Split `level.h` into format model / enums / data exports (or at least comment
   the sections).
-- [ ] **P3.** Move `cheat_noclip` declaration to `cheats.h` once it stops being read directly
+- [x] **P3.** Move `cheat_noclip` declaration to `cheats.h` once it stops being read directly
   by physics paths.
+  ✅ Done — `cheat_noclip` is declared in cheats.h and defined in cheats.cpp next to the
+  other cheat state; physics.cpp includes cheats.h to read it, physics.h no longer mentions
+  cheats. (Note: the physics read site itself stays — bypassing collision under noclip is
+  original-assembly behavior; only the declaration home moved.)
 
 ---
 

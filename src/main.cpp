@@ -52,6 +52,38 @@ void process_door_input() {
     previous_key_state_open = key_state_open;
 }
 
+// Translate an SDL key event into the SDL-independent CheatKey enum, so
+// cheats.h does not need SDL at all (cheat logic stays testable without a
+// video backend). Unmapped keys become CheatKey::None and are ignored.
+static CheatKey cheat_key_from_sdl(const SDL_Keycode key) {
+    switch (key) {
+        case SDLK_F1:
+            return CheatKey::F1;
+        case SDLK_F2:
+            return CheatKey::F2;
+        case SDLK_F3:
+            return CheatKey::F3;
+        case SDLK_F4:
+            return CheatKey::F4;
+        case SDLK_F5:
+            return CheatKey::F5;
+        case SDLK_q:
+            return CheatKey::Q;
+        case SDLK_BACKSPACE:
+            return CheatKey::Backspace;
+        case SDLK_RETURN:
+            return CheatKey::Return;
+        case SDLK_KP_ENTER:
+            return CheatKey::KpEnter;
+        default:
+            break;
+    }
+    if (key >= SDLK_0 && key <= SDLK_9) {
+        return static_cast<CheatKey>(static_cast<int>(CheatKey::Digit0) + (key - SDLK_0));
+    }
+    return CheatKey::None;
+}
+
 int main(int argc, const char* argv[]) {
     // Parse command-line arguments
     bool debug_mode = false;
@@ -155,14 +187,14 @@ int main(int argc, const char* argv[]) {
     ActorSystem actor_system;
     actor_system.initialize();
     if (debug_mode) {
-        actor_system.comic_firepower = 3;  // Start with 3 fireball slots in debug mode for testing
+        comic_firepower = 3;  // Player inventory is single-sourced in game_state.h
     }
 
     // Make actor system accessible to cheat system
     g_actor_system = &actor_system;
 
     // Initialize UI system
-    UISystem ui_system;
+    UISystem ui_system(g_graphics);
     if (!ui_system.initialize()) {
         std::cerr << "Warning: UI system initialization failed. HUD will not display properly."
                   << std::endl;
@@ -219,7 +251,7 @@ int main(int argc, const char* argv[]) {
     if (!g_graphics->load_sprite("pause", "")) {
         std::cerr << "Warning: Could not load pause sprite (sprite-pause.png)." << std::endl;
     }
-    Sprite* pause_sprite = g_graphics->get_sprite("pause", "");
+    const Sprite* pause_sprite = g_graphics->get_sprite("pause", "");
 
     if (!g_graphics->load_sprite("game_over", "")) {
         std::cerr << "Warning: Could not load game-over sprite (sprite-game_over.png)."
@@ -401,7 +433,7 @@ int main(int argc, const char* argv[]) {
                 }
 
                 // Process cheat keys (only active if --debug flag set)
-                g_cheats->process_input(e.key.keysym.sym);
+                g_cheats->process_input(cheat_key_from_sdl(e.key.keysym.sym));
             } else if (e.type == SDL_KEYUP) {
                 const InputBindings& bindings = get_input_bindings();
                 const SDL_Keycode key = e.key.keysym.sym;
@@ -575,12 +607,12 @@ int main(int argc, const char* argv[]) {
                 // Process teleport input once per tick (edge-triggered)
                 // Teleport activation happens AFTER physics resolves, not before
                 if (!comic_is_falling_or_jumping && !comic_is_teleporting) {
-                    process_teleport_input(actor_system.comic_has_teleport_wand != 0);
+                    process_teleport_input(comic_has_teleport_wand != 0);
                 } else {
                     previous_key_state_teleport = key_state_teleport;
                 }
 
-                if (!beam_out_sequence_played && actor_system.comic_num_treasures >= 3) {
+                if (!beam_out_sequence_played && comic_num_treasures >= 3) {
                     beam_out_sequence_played = true;
                     win_counter = 20;
                 }
@@ -923,27 +955,17 @@ int main(int argc, const char* argv[]) {
         // Draw in the same 320x200 letterboxed coordinate space as SYS003.
         SDL_RenderSetViewport(renderer, &gameplay_frame_rect);
         SDL_RenderSetScale(renderer, letterbox_scale, letterbox_scale);
-        ui_system.render_hud(score_bytes, comic_num_lives, comic_hp, actor_system.fireball_meter,
-                             actor_system.comic_firepower, actor_system.comic_has_corkscrew != 0,
-                             comic_has_door_key != 0, actor_system.comic_has_teleport_wand != 0,
-                             actor_system.comic_has_lantern != 0, actor_system.comic_has_gems != 0,
-                             actor_system.comic_has_crown != 0, actor_system.comic_has_gold != 0,
-                             comic_jump_power);
+        ui_system.render_hud(
+            score_bytes, comic_num_lives, comic_hp, actor_system.get_fireball_meter(),
+            comic_firepower, comic_has_corkscrew != 0, comic_has_door_key != 0,
+            comic_has_teleport_wand != 0, comic_has_lantern != 0, comic_has_gems != 0,
+            comic_has_crown != 0, comic_has_gold != 0, comic_jump_power);
         SDL_RenderSetScale(renderer, 1.0f, 1.0f);
         SDL_RenderSetViewport(renderer, nullptr);
 
         if (game_state == GameState::Paused && pause_sprite) {
-            const int pause_x_ega = 40;
-            const int pause_y_ega = 64;
-            const int pause_width_ega = 128;
-            const int pause_height_ega = 48;
-
-            SDL_Rect pause_rect = {
-                gameplay_frame_rect.x + static_cast<int>(pause_x_ega * letterbox_scale),
-                gameplay_frame_rect.y + static_cast<int>(pause_y_ega * letterbox_scale),
-                static_cast<int>(pause_width_ega * letterbox_scale),
-                static_cast<int>(pause_height_ega * letterbox_scale)};
-            SDL_RenderCopy(renderer, pause_sprite->texture.texture, nullptr, &pause_rect);
+            // Pause overlay: fixed EGA playfield placement (40, 64, 128x48).
+            g_graphics->render_sprite_in_ega_frame(*pause_sprite, 40, 64, 128, 48);
         }
 
         // Present

@@ -37,6 +37,15 @@ int camera_x = 0;
 
 // --- Items / lives / HP / score ---
 uint8_t comic_has_door_key = 0;              // 1 if player has door key, 0 otherwise
+uint8_t comic_firepower = 0;                 // 0-5: number of fireball slots available
+uint8_t comic_has_corkscrew = 0;             // 1 if Comic has the Corkscrew item
+uint8_t comic_has_boots = 0;                 // 1 if Comic has Boots (increased jump power)
+uint8_t comic_has_lantern = 0;               // 1 if Comic has Lantern (castle lighting)
+uint8_t comic_has_teleport_wand = 0;         // 1 if Comic has Teleport Wand
+uint8_t comic_has_gems = 0;                  // 1 if Comic collected Gems
+uint8_t comic_has_crown = 0;                 // 1 if Comic collected Crown
+uint8_t comic_has_gold = 0;                  // 1 if Comic collected Gold
+uint8_t comic_num_treasures = 0;             // Count of treasures collected (0-3)
 uint8_t comic_num_lives = 0;                 // Lives remaining (counts up 0..5, then -1)
 uint8_t lives_sequence_counter = 5;          // Lives count-up: award 5 lives, then subtract 1
 uint8_t lives_sequence_delay = 1;            // Delay counter for lives animation (1 tick per award)

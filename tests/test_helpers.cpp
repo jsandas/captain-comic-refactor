@@ -33,6 +33,7 @@ Animation make_animation(const std::vector<int>& durations, bool looping) {
 }
 
 void reset_physics_state() {
+    reset_item_flags();
     init_test_level();
     comic_x = 4;
     comic_y = 14;
@@ -67,6 +68,20 @@ void reset_physics_state() {
     score_bytes[1] = 0;
     score_bytes[2] = 0;
     score_10000_counter = 0;
+}
+
+void reset_item_flags() {
+    // Player inventory flags are game_state.h globals; tests assume a fresh
+    // zeroed inventory.
+    comic_firepower = 0;
+    comic_has_corkscrew = 0;
+    comic_has_boots = 0;
+    comic_has_lantern = 0;
+    comic_has_teleport_wand = 0;
+    comic_has_gems = 0;
+    comic_has_crown = 0;
+    comic_has_gold = 0;
+    comic_num_treasures = 0;
 }
 
 void reset_door_state() {

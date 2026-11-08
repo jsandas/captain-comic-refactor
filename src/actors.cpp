@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "audio.h"
+#include "game_constants.h"
 #include "game_state.h"
 #include "level.h"
 #include "physics.h"
@@ -61,8 +62,6 @@ void award_points(uint16_t points) {
 }
 
 void award_extra_life() {
-    constexpr uint8_t MAX_NUM_LIVES = 5;
-
     play_game_sound(GameSound::EXTRA_LIFE);
 
     if (comic_num_lives >= MAX_NUM_LIVES) {
@@ -80,17 +79,10 @@ void award_extra_life() {
 /**
  * ActorSystem constructor
  */
+// Player inventory flags (comic_firepower, comic_has_corkscrew, ...) live
+// once, in game_state.h/.cpp; apply_item_effect writes those globals.
 ActorSystem::ActorSystem()
-    : comic_firepower(0),
-      comic_has_corkscrew(0),
-      fireball_meter(0),
-      comic_has_boots(0),
-      comic_has_lantern(0),
-      comic_has_teleport_wand(0),
-      comic_has_gems(0),
-      comic_has_crown(0),
-      comic_has_gold(0),
-      comic_num_treasures(0),
+    : fireball_meter(0),
       enemies(MAX_NUM_ENEMIES),
       fireballs(MAX_NUM_FIREBALLS),
       fireball_meter_counter(FIREBALL_METER_COUNTER_INIT),
@@ -1543,9 +1535,10 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
  * ============================================================================ */
 
 /**
- * Get current jump power based on boots status
+ * Get current jump power based on boots status.
+ * Static: reads only the game_state.h inventory globals.
  */
-int ActorSystem::get_jump_power() const {
+int ActorSystem::get_jump_power() {
     return comic_has_boots ? JUMP_POWER_WITH_BOOTS : JUMP_POWER_DEFAULT;
 }
 
@@ -1670,6 +1663,7 @@ void ActorSystem::collect_item() {
 
 /**
  * Apply the effect of collecting a specific item type.
+ * Static: writes only the game_state.h inventory globals.
  */
 void ActorSystem::apply_item_effect(uint8_t item_type) {
     switch (item_type) {

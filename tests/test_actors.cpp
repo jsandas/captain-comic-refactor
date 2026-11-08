@@ -31,9 +31,13 @@ static void reset_actor_state(const ActorSystem& actor_system) {
         fireball.x = FIREBALL_DEAD;
         fireball.y = FIREBALL_DEAD;
     }
+
+    // Player inventory now lives in game_state.h globals; actor tests assume a
+    // fresh zeroed inventory exactly like a fresh ActorSystem used to provide.
+    reset_item_flags();
 }
 
-void test_actor_spawn_one_per_tick() {
+REGISTER_TEST(test_actor_spawn_one_per_tick) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -63,7 +67,7 @@ void test_actor_spawn_one_per_tick() {
     check(spawned == 1, "actor_spawn: should spawn exactly 1 enemy per tick");
 }
 
-void test_actor_spawn_offset_cycling() {
+REGISTER_TEST(test_actor_spawn_offset_cycling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -101,7 +105,7 @@ void test_actor_spawn_offset_cycling() {
     check(has_variation, "actor_spawn_offset: spawn positions should vary due to offset cycling");
 }
 
-void test_actor_despawn_distance() {
+REGISTER_TEST(test_actor_despawn_distance) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -131,7 +135,7 @@ void test_actor_despawn_distance() {
     delete[] tiles;
 }
 
-void test_actor_player_collision() {
+REGISTER_TEST(test_actor_player_collision) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -156,7 +160,7 @@ void test_actor_player_collision() {
     delete[] tiles;
 }
 
-void test_actor_death_animation() {
+REGISTER_TEST(test_actor_death_animation) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -185,7 +189,7 @@ void test_actor_death_animation() {
     delete[] tiles;
 }
 
-void test_actor_respawn_timer_cycling() {
+REGISTER_TEST(test_actor_respawn_timer_cycling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -216,7 +220,7 @@ void test_actor_respawn_timer_cycling() {
     delete[] tiles;
 }
 
-void test_actor_animation_frames() {
+REGISTER_TEST(test_actor_animation_frames) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -242,7 +246,7 @@ void test_actor_animation_frames() {
     delete[] tiles;
 }
 
-void test_actor_behavior_bounce_movement() {
+REGISTER_TEST(test_actor_behavior_bounce_movement) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -278,7 +282,7 @@ void test_actor_behavior_bounce_movement() {
     delete[] tiles;
 }
 
-void test_actor_restraint_throttling() {
+REGISTER_TEST(test_actor_restraint_throttling) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -304,14 +308,14 @@ void test_actor_restraint_throttling() {
     delete[] tiles;
 }
 
-void test_fireball_meter_depletion_timing() {
+REGISTER_TEST(test_fireball_meter_depletion_timing) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
-    actor_system.fireball_meter = 3;
+    comic_firepower = 1;
+    actor_system.set_fireball_meter_for_test(3);
 
     comic_x = 10;
     comic_y = 10;
@@ -319,19 +323,19 @@ void test_fireball_meter_depletion_timing() {
     camera_x = 0;
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 2,
+    check(actor_system.get_fireball_meter() == 2,
           "fireball_meter: should decrement on first firing tick");
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 2,
+    check(actor_system.get_fireball_meter() == 2,
           "fireball_meter: should not decrement on second firing tick");
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 1);
-    check(actor_system.fireball_meter == 1,
+    check(actor_system.get_fireball_meter() == 1,
           "fireball_meter: should decrement on third firing tick");
 }
 
-void test_fireball_meter_recharge_timing() {
+REGISTER_TEST(test_fireball_meter_recharge_timing) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -344,20 +348,20 @@ void test_fireball_meter_recharge_timing() {
 
     // Advance once so the counter reaches the recharge phase.
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 0);
-    actor_system.fireball_meter = 10;
+    actor_system.set_fireball_meter_for_test(10);
 
     actor_system.update(comic_x, comic_y, comic_facing, tiles.data(), camera_x, 0);
-    check(actor_system.fireball_meter == 11,
+    check(actor_system.get_fireball_meter() == 11,
           "fireball_meter: should recharge every other tick when idle");
 }
 
-void test_fireball_offscreen_deactivates() {
+REGISTER_TEST(test_fireball_offscreen_deactivates) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
+    comic_firepower = 1;
     comic_x = 10;
     comic_y = 10;
     comic_facing = COMIC_FACING_LEFT;
@@ -376,13 +380,13 @@ void test_fireball_offscreen_deactivates() {
           "fireball_offscreen: should deactivate when leaving camera bounds");
 }
 
-void test_fireball_collision_sets_white_spark() {
+REGISTER_TEST(test_fireball_collision_sets_white_spark) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
+    comic_firepower = 1;
     comic_x = 10;
     comic_y = 0;
     comic_facing = COMIC_FACING_RIGHT;
@@ -410,14 +414,14 @@ void test_fireball_collision_sets_white_spark() {
           "fireball_collision: fireball should deactivate on hit");
 }
 
-void test_fireball_corkscrew_motion() {
+REGISTER_TEST(test_fireball_corkscrew_motion) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     std::vector<uint8_t> tiles(128 * 10, 0);
-    actor_system.comic_firepower = 1;
-    actor_system.comic_has_corkscrew = 1;
+    comic_firepower = 1;
+    comic_has_corkscrew = 1;
     comic_x = 10;
     comic_y = 10;
     comic_facing = COMIC_FACING_RIGHT;
@@ -440,31 +444,30 @@ void test_fireball_corkscrew_motion() {
           "fireball_corkscrew: should move up and flip to phase 2");
 }
 
-void test_item_collection_tracking() {
+REGISTER_TEST(test_item_collection_tracking) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     // Initially, no items collected
-    check(actor_system.comic_firepower == 0, "item_collection: firepower should start at 0");
-    check(actor_system.comic_has_boots == 0, "item_collection: should not have boots initially");
+    check(comic_firepower == 0, "item_collection: firepower should start at 0");
+    check(comic_has_boots == 0, "item_collection: should not have boots initially");
 
     // Simulate collecting Blastola Cola
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 1,
-          "item_collection: Blastola Cola should increase firepower to 1");
+    check(comic_firepower == 1, "item_collection: Blastola Cola should increase firepower to 1");
 
     // Collect second Blastola Cola
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 2,
+    check(comic_firepower == 2,
           "item_collection: second Blastola Cola should increase firepower to 2");
 
     // Collect Boots
     actor_system.apply_item_effect(ITEM_BOOTS);
-    check(actor_system.comic_has_boots == 1, "item_collection: should have boots after collection");
+    check(comic_has_boots == 1, "item_collection: should have boots after collection");
 }
 
-void test_actor_door_key_sync() {
+REGISTER_TEST(test_actor_door_key_sync) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -476,7 +479,7 @@ void test_actor_door_key_sync() {
     check(comic_has_door_key == 1, "global door key flag should be set by ActorSystem");
 }
 
-void test_actor_spawn_avoids_solid_tiles() {
+REGISTER_TEST(test_actor_spawn_avoids_solid_tiles) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -509,7 +512,7 @@ void test_actor_spawn_avoids_solid_tiles() {
           "actor_spawn_solidity: spawned enemy should not be placed inside a solid tile");
 }
 
-void test_actor_pit_fall_despawns_without_spark() {
+REGISTER_TEST(test_actor_pit_fall_despawns_without_spark) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -538,26 +541,26 @@ void test_actor_pit_fall_despawns_without_spark() {
           "actor_pit_fall: enemy should despawn on the tick after bottom-edge clamp");
 }
 
-void test_item_blastola_cola_firepower() {
+REGISTER_TEST(test_item_blastola_cola_firepower) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     // Initially no firepower
-    check(actor_system.comic_firepower == 0, "blastola_cola: firepower should start at 0");
+    check(comic_firepower == 0, "blastola_cola: firepower should start at 0");
 
     // Collect 5 Blastola Colas (max firepower)
     for (int i = 0; i < 5; i++) {
         actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
     }
-    check(actor_system.comic_firepower == 5, "blastola_cola: should reach max firepower of 5");
+    check(comic_firepower == 5, "blastola_cola: should reach max firepower of 5");
 
     // Try to collect a 6th (should not exceed max)
     actor_system.apply_item_effect(ITEM_BLASTOLA_COLA);
-    check(actor_system.comic_firepower == 5, "blastola_cola: firepower should not exceed 5");
+    check(comic_firepower == 5, "blastola_cola: firepower should not exceed 5");
 }
 
-void test_item_boots_jump_power() {
+REGISTER_TEST(test_item_boots_jump_power) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -576,54 +579,49 @@ void test_item_boots_jump_power() {
           "boots_jump: boots jump power should be greater than default");
 }
 
-void test_item_corkscrew_flag() {
+REGISTER_TEST(test_item_corkscrew_flag) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
-    check(actor_system.comic_has_corkscrew == 0, "corkscrew: should not have corkscrew initially");
+    check(comic_has_corkscrew == 0, "corkscrew: should not have corkscrew initially");
 
     actor_system.apply_item_effect(ITEM_CORKSCREW);
-    check(actor_system.comic_has_corkscrew == 1,
-          "corkscrew: should have corkscrew after collection");
+    check(comic_has_corkscrew == 1, "corkscrew: should have corkscrew after collection");
 }
 
-void test_item_treasure_counting() {
+REGISTER_TEST(test_item_treasure_counting) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
 
     // Initially no treasures
-    check(actor_system.comic_num_treasures == 0, "treasures: treasure count should start at 0");
-    check(actor_system.comic_has_gems == 0, "treasures: should not have gems initially");
-    check(actor_system.comic_has_crown == 0, "treasures: should not have crown initially");
-    check(actor_system.comic_has_gold == 0, "treasures: should not have gold initially");
+    check(comic_num_treasures == 0, "treasures: treasure count should start at 0");
+    check(comic_has_gems == 0, "treasures: should not have gems initially");
+    check(comic_has_crown == 0, "treasures: should not have crown initially");
+    check(comic_has_gold == 0, "treasures: should not have gold initially");
 
     // Collect Gems
     actor_system.apply_item_effect(ITEM_GEMS);
-    check(actor_system.comic_has_gems == 1, "treasures: should have gems after collection");
-    check(actor_system.comic_num_treasures == 1,
-          "treasures: treasure count should be 1 after gems");
+    check(comic_has_gems == 1, "treasures: should have gems after collection");
+    check(comic_num_treasures == 1, "treasures: treasure count should be 1 after gems");
 
     // Collect Crown
     actor_system.apply_item_effect(ITEM_CROWN);
-    check(actor_system.comic_has_crown == 1, "treasures: should have crown after collection");
-    check(actor_system.comic_num_treasures == 2,
-          "treasures: treasure count should be 2 after crown");
+    check(comic_has_crown == 1, "treasures: should have crown after collection");
+    check(comic_num_treasures == 2, "treasures: treasure count should be 2 after crown");
 
     // Collect Gold
     actor_system.apply_item_effect(ITEM_GOLD);
-    check(actor_system.comic_has_gold == 1, "treasures: should have gold after collection");
-    check(actor_system.comic_num_treasures == 3,
-          "treasures: treasure count should be 3 after gold");
+    check(comic_has_gold == 1, "treasures: should have gold after collection");
+    check(comic_num_treasures == 3, "treasures: treasure count should be 3 after gold");
 
     // Collecting same treasure again should not increase count
     actor_system.apply_item_effect(ITEM_GEMS);
-    check(actor_system.comic_num_treasures == 3,
-          "treasures: duplicate collection should not increase count");
+    check(comic_num_treasures == 3, "treasures: duplicate collection should not increase count");
 }
 
-void test_item_special_items() {
+REGISTER_TEST(test_item_special_items) {
     reset_physics_state();
     ActorSystem actor_system;
     actor_system.initialize();
@@ -634,17 +632,15 @@ void test_item_special_items() {
     check(comic_has_door_key == 1, "special_items: should have door key after collection");
 
     // Teleport Wand
-    check(actor_system.comic_has_teleport_wand == 0,
-          "special_items: should not have teleport wand initially");
+    check(comic_has_teleport_wand == 0, "special_items: should not have teleport wand initially");
     actor_system.apply_item_effect(ITEM_TELEPORT_WAND);
-    check(actor_system.comic_has_teleport_wand == 1,
+    check(comic_has_teleport_wand == 1,
           "special_items: should have teleport wand after collection");
 
     // Lantern
-    check(actor_system.comic_has_lantern == 0, "special_items: should not have lantern initially");
+    check(comic_has_lantern == 0, "special_items: should not have lantern initially");
     actor_system.apply_item_effect(ITEM_LANTERN);
-    check(actor_system.comic_has_lantern == 1,
-          "special_items: should have lantern after collection");
+    check(comic_has_lantern == 1, "special_items: should have lantern after collection");
 
     // Shield (not full HP): schedule refill to MAX_HP
     comic_num_lives = 2;
@@ -678,4 +674,53 @@ void test_item_special_items() {
           "special_items: shield at max lives should set pending HP refill");
     check(score_bytes[0] == 25 && score_bytes[1] == 2 && score_bytes[2] == 0,
           "special_items: shield at max lives should award 22500 points");
+}
+
+// Regression guard for the LEAP ascent delta: enemy_behavior_leap computes the
+// upward delta as a floor division (assembly `sar`, sar(-7, 3) == -1), NOT as
+// plain C truncating division where -7 / 8 == 0. A truncating `/ 8` would
+// cancel the leap entirely: the enemy never rises during the -7/-5/-3/-1
+// velocity phase. This test pins the exact tile-by-tile ascent trajectory.
+REGISTER_TEST(test_enemy_leap_negative_velocity_floor_div) {
+    reset_physics_state();
+    reset_item_flags();
+    ActorSystem actor_system;
+    actor_system.initialize();
+    reset_actor_state(actor_system);
+
+    // Zero-filled map: no solid tiles, so vertical movement is unobstructed.
+    const uint8_t* tiles = new uint8_t[128 * 10]();
+    auto& enemies = const_cast<std::vector<enemy_t>&>(actor_system.get_enemies());
+
+    // LEAP enemy already mid-jump (as if .begin_leap set y_vel = ENEMY_JUMP_VELOCITY).
+    setup_test_enemy(enemies, 0, ENEMY_BEHAVIOR_LEAP);
+    enemies[0].state = ENEMY_STATE_SPAWNED;
+    enemies[0].x = 10;
+    enemies[0].y = 10;
+    enemies[0].x_vel = 0;
+    enemies[0].y_vel = ENEMY_JUMP_VELOCITY;  // -7
+
+    comic_x = 0;
+    comic_y = 0;
+
+    // sar(-7,3) = -1, then gravity +2 → -5: each ascent tick moves up exactly 1.
+    // The truncating-division regression would keep y == 10 for all four ticks.
+    const struct {
+        int8_t vel;
+        uint8_t y;
+    } expected[] = {
+        {-5, 9},  // tick 1: delta floor(-7/8) = -1, gravity → -5
+        {-3, 8},  // tick 2: delta floor(-5/8) = -1, gravity → -3
+        {-1, 7},  // tick 3: delta floor(-3/8) = -1, gravity → -1
+        {1, 6},   // tick 4: delta floor(-1/8) = -1 (nonzero remainder rounds down), gravity → +1
+    };
+
+    for (const auto& step : expected) {
+        actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x);
+        check(enemies[0].y == step.y, "enemy_leap_floor_div: ascent should follow sar deltas");
+        check(enemies[0].y_vel == step.vel,
+              "enemy_leap_floor_div: gravity must apply per ascent tick");
+    }
+
+    delete[] tiles;
 }

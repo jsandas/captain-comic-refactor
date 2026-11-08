@@ -114,8 +114,9 @@ void load_new_level() {
             /* Continue anyway - may work with existing tileset */
         }
 
-        const bool has_lantern =
-            (g_actor_system != nullptr) && (g_actor_system->comic_has_lantern == 1);
+        // Lantern is player state, single-sourced in game_state.h (no need for
+        // a live ActorSystem to read it).
+        const bool has_lantern = (comic_has_lantern == 1);
         const bool should_blackout_tiles =
             (current_level_number == LEVEL_NUMBER_CASTLE) && !has_lantern;
         g_graphics->set_tileset_blackout(level_name, should_blackout_tiles);

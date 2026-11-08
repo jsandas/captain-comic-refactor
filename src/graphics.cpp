@@ -20,8 +20,56 @@
 // Global graphics system
 GraphicsSystem* g_graphics = nullptr;
 
+namespace {
+
+// Custom deleters for the shared_ptr-owned SDL resources. They are attached
+// when each resource is created so TextureInfo / font copies never have to
+// remember how to release the underlying handle.
+void destroy_sdl_texture(SDL_Texture* texture) {
+    if (texture) {
+        SDL_DestroyTexture(texture);
+    }
+}
+
+void close_ttf_font(TTF_Font* font) {
+    if (font) {
+        TTF_CloseFont(font);
+    }
+}
+
+std::shared_ptr<SDL_Texture> make_texture_shared(SDL_Texture* texture) {
+    return std::shared_ptr<SDL_Texture>(texture, destroy_sdl_texture);
+}
+
+}  // namespace
+
+// The header-side SdlFontHandle forward declaration is satisfied here (global
+// scope, same type): this owns one opened TTF_Font and releases it with
+// TTF_CloseFont, so graphics.h never needs SDL's font type spelling (which
+// differs between SDL2 versions).
+struct SdlFontHandle {
+    TTF_Font* font = nullptr;
+};
+
+namespace {
+
+std::shared_ptr<SdlFontHandle> make_font_handle(TTF_Font* font) {
+    if (font == nullptr) {
+        return nullptr;
+    }
+
+    return std::shared_ptr<SdlFontHandle>(new SdlFontHandle{font}, [](SdlFontHandle* handle) {
+        if (handle) {
+            close_ttf_font(handle->font);
+            delete handle;
+        }
+    });
+}
+
+}  // namespace
+
 GraphicsSystem::GraphicsSystem(SDL_Renderer* renderer)
-    : renderer(renderer), img_inited(false), ttf_inited(false), debug_font(nullptr) {}
+    : renderer(renderer), img_inited(false), ttf_inited(false) {}
 
 GraphicsSystem::~GraphicsSystem() { cleanup(); }
 
@@ -62,7 +110,9 @@ bool GraphicsSystem::initialize() {
 
     const int debug_font_size = 12;
     for (const auto& font_path : font_candidates) {
-        debug_font = TTF_OpenFont(font_path.c_str(), debug_font_size);
+        // Open the debug font wrapped in the opaque pimpl handle (custom
+        // TTF_CloseFont deleter), keeping SDL_ttf spellings out of graphics.h.
+        debug_font = make_font_handle(TTF_OpenFont(font_path.c_str(), debug_font_size));
         if (debug_font != nullptr) {
             break;
         }
@@ -140,7 +190,7 @@ std::string GraphicsSystem::get_asset_path(const std::string& filename) {
 }
 
 TextureInfo GraphicsSystem::load_png(const std::string& filepath) {
-    TextureInfo info = {nullptr, 0, 0};
+    TextureInfo info;
     static std::unordered_set<std::string> logged_load_failures;
 
     // Try multiple possible paths
@@ -168,7 +218,7 @@ TextureInfo GraphicsSystem::load_png(const std::string& filepath) {
         return info;
     }
 
-    info.texture = SDL_CreateTextureFromSurface(renderer, surface);
+    info.texture = make_texture_shared(SDL_CreateTextureFromSurface(renderer, surface));
     if (info.texture == nullptr) {
         std::cerr << "Failed to create texture from surface: " << SDL_GetError() << std::endl;
         SDL_FreeSurface(surface);
@@ -221,15 +271,8 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(const std::string
     static const std::string prefixes[] = {"assets/shp/", "../assets/shp/", "../../assets/shp/",
                                            "assets/",     "../assets/",     "../../assets/"};
 
-    auto cleanup_frames = [](std::vector<TextureInfo>& f) {
-        for (auto& info : f) {
-            if (info.texture) {
-                SDL_DestroyTexture(info.texture);
-            }
-        }
-        f.clear();
-    };
-
+    // With TextureInfo owning its texture through a shared_ptr, dropping the
+    // frames vector releases everything automatically.
     for (int i = 0; i < expected_frames; ++i) {
         std::string filename = base_path + "-" + std::to_string(i) + ".png";
         SDL_Surface* surface = nullptr;
@@ -251,7 +294,7 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(const std::string
         if (surface == nullptr) {
             std::cerr << "Error: Could not find frame " << i << " for '" << label << "' (tried "
                       << filename << ")" << std::endl;
-            cleanup_frames(frames);
+            frames.clear();
             return frames;
         }
 
@@ -263,11 +306,11 @@ std::vector<TextureInfo> GraphicsSystem::load_animation_frames(const std::string
         if (texture == nullptr) {
             std::cerr << "Error: Failed to create animation texture for '" << label << "' frame "
                       << i << ": " << SDL_GetError() << std::endl;
-            cleanup_frames(frames);
+            frames.clear();
             return frames;
         }
 
-        frames.push_back({texture, w, h});
+        frames.push_back({make_texture_shared(texture), w, h});
     }
 
     return frames;
@@ -347,7 +390,7 @@ void GraphicsSystem::set_tileset_blackout(const std::string& level_name, bool bl
     for (auto& tile_entry : tileset_it->second.tiles) {
         TextureInfo& tile_texture = tile_entry.second;
         if (tile_texture.texture != nullptr) {
-            SDL_SetTextureColorMod(tile_texture.texture, color, color, color);
+            SDL_SetTextureColorMod(tile_texture.texture.get(), color, color, color);
         }
     }
 }
@@ -423,85 +466,57 @@ SpriteAnimationData* GraphicsSystem::load_enemy_sprite(const shp_t& sprite_desc)
     // Check if already loaded
     auto it = enemy_sprites.find(cache_key.str());
     if (it != enemy_sprites.end()) {
-        return it->second;
+        return &it->second;
     }
 
-    // Load per-frame PNGs: {sprite_name}-left-0.png, -1.png, etc.
-    auto* animation_data = new SpriteAnimationData();
-    animation_data->frames_left = load_animation_frames(
+    // Load per-frame PNGs: {sprite_name}-left-0.png, -1.png, etc. Value-owned
+    // locally, then moved into the owning map - no manual delete anywhere.
+    SpriteAnimationData animation_data;
+    animation_data.frames_left = load_animation_frames(
         sprite_name + "-left", sprite_desc.num_distinct_frames, sprite_name + ":left");
 
     if (sprite_desc.horizontal == ENEMY_HORIZONTAL_SEPARATE) {
-        animation_data->frames_right = load_animation_frames(
+        animation_data.frames_right = load_animation_frames(
             sprite_name + "-right", sprite_desc.num_distinct_frames, sprite_name + ":right");
     }
 
-    if (animation_data->frames_left.empty()) {
-        delete animation_data;
+    if (animation_data.frames_left.empty()) {
         return nullptr;
     }
 
     if (sprite_desc.horizontal == ENEMY_HORIZONTAL_SEPARATE &&
-        animation_data->frames_right.empty()) {
-        for (auto& frame : animation_data->frames_left) {
-            if (frame.texture) {
-                SDL_DestroyTexture(frame.texture);
-            }
-        }
-        delete animation_data;
+        animation_data.frames_right.empty()) {
         return nullptr;
     }
 
-    size_t distinct_frames = animation_data->frames_left.size();
+    size_t distinct_frames = animation_data.frames_left.size();
     if (sprite_desc.horizontal == ENEMY_HORIZONTAL_SEPARATE) {
-        distinct_frames = std::min(distinct_frames, animation_data->frames_right.size());
-        if (animation_data->frames_left.size() != animation_data->frames_right.size()) {
+        distinct_frames = std::min(distinct_frames, animation_data.frames_right.size());
+        if (animation_data.frames_left.size() != animation_data.frames_right.size()) {
             std::cerr << "Warning: Animation frame count mismatch for " << sprite_name
-                      << " (left=" << animation_data->frames_left.size()
-                      << ", right=" << animation_data->frames_right.size() << "), truncating to "
+                      << " (left=" << animation_data.frames_left.size()
+                      << ", right=" << animation_data.frames_right.size() << "), truncating to "
                       << distinct_frames << std::endl;
-            // Destroy excess textures before truncating to avoid leaks
-            for (size_t i = distinct_frames; i < animation_data->frames_left.size(); ++i) {
-                if (animation_data->frames_left[i].texture) {
-                    SDL_DestroyTexture(animation_data->frames_left[i].texture);
-                    animation_data->frames_left[i].texture = nullptr;
-                }
-            }
-            for (size_t i = distinct_frames; i < animation_data->frames_right.size(); ++i) {
-                if (animation_data->frames_right[i].texture) {
-                    SDL_DestroyTexture(animation_data->frames_right[i].texture);
-                    animation_data->frames_right[i].texture = nullptr;
-                }
-            }
-            animation_data->frames_left.resize(distinct_frames);
-            animation_data->frames_right.resize(distinct_frames);
+            // Excess textures release automatically (shared_ptr) as the
+            // frame vectors are truncated.
+            animation_data.frames_left.resize(distinct_frames);
+            animation_data.frames_right.resize(distinct_frames);
         }
     }
 
     // Clamp to uint8_t range before cast — enemy animations are defined in
     // level_data.cpp with num_distinct_frames as uint8_t (max 255), so this
     // is a safety guard rather than an expected runtime condition.
-    animation_data->frame_sequence = build_enemy_animation_sequence(
+    animation_data.frame_sequence = build_enemy_animation_sequence(
         static_cast<uint8_t>(std::min(distinct_frames, static_cast<size_t>(255))),
         sprite_desc.animation);
 
-    if (animation_data->frame_sequence.empty()) {
-        for (auto& frame : animation_data->frames_left) {
-            if (frame.texture) {
-                SDL_DestroyTexture(frame.texture);
-            }
-        }
-        for (auto& frame : animation_data->frames_right) {
-            if (frame.texture) {
-                SDL_DestroyTexture(frame.texture);
-            }
-        }
-        delete animation_data;
+    if (animation_data.frame_sequence.empty()) {
         return nullptr;
     }
 
-    enemy_sprites[cache_key.str()] = animation_data;
-    return animation_data;
+    auto inserted = enemy_sprites.emplace(cache_key.str(), std::move(animation_data));
+    return &inserted.first->second;
 }
 
 Animation GraphicsSystem::create_animation(const std::vector<std::string>& sprite_names,
@@ -580,20 +595,20 @@ void GraphicsSystem::render_tile(int screen_x, int screen_y, Tileset* tileset, u
     const TextureInfo& texture = it->second;
     int pixel_size = scale * 2;  // 2 game units per tile
     SDL_Rect dst_rect = {screen_x, screen_y, pixel_size, pixel_size};
-    SDL_RenderCopy(renderer, texture.texture, nullptr, &dst_rect);
+    SDL_RenderCopy(renderer, texture.texture.get(), nullptr, &dst_rect);
 }
 
 void GraphicsSystem::render_sprite(int screen_x, int screen_y, const Sprite& sprite, bool flip_h) {
     SDL_Rect dst_rect = {screen_x, screen_y, sprite.width, sprite.height};
     SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-    SDL_RenderCopyEx(renderer, sprite.texture.texture, nullptr, &dst_rect, 0, nullptr, flip);
+    SDL_RenderCopyEx(renderer, sprite.texture.texture.get(), nullptr, &dst_rect, 0, nullptr, flip);
 }
 
 void GraphicsSystem::render_sprite_scaled(int screen_x, int screen_y, const Sprite& sprite,
                                           int width, int height, bool flip_h) {
     SDL_Rect dst_rect = {screen_x, screen_y, width, height};
     SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-    SDL_RenderCopyEx(renderer, sprite.texture.texture, nullptr, &dst_rect, 0, nullptr, flip);
+    SDL_RenderCopyEx(renderer, sprite.texture.texture.get(), nullptr, &dst_rect, 0, nullptr, flip);
 }
 
 void GraphicsSystem::render_sprite_centered(int screen_x, int screen_y, const Sprite& sprite,
@@ -601,6 +616,26 @@ void GraphicsSystem::render_sprite_centered(int screen_x, int screen_y, const Sp
     int x = screen_x - sprite.width / 2;
     int y = screen_y - sprite.height / 2;
     render_sprite(x, y, sprite, flip_h);
+}
+
+void GraphicsSystem::render_sprite_in_ega_frame(const Sprite& sprite, int x_ega, int y_ega,
+                                                int w_ega, int h_ega, bool present) {
+    if (renderer == nullptr || sprite.texture.texture == nullptr) {
+        return;
+    }
+
+    const SDL_Rect gameplay_frame_rect = compute_letterbox_rect(renderer);
+    const float letterbox_scale = static_cast<float>(gameplay_frame_rect.w) / EGA_WIDTH;
+
+    const SDL_Rect dst_rect = {gameplay_frame_rect.x + static_cast<int>(x_ega * letterbox_scale),
+                               gameplay_frame_rect.y + static_cast<int>(y_ega * letterbox_scale),
+                               static_cast<int>(w_ega * letterbox_scale),
+                               static_cast<int>(h_ega * letterbox_scale)};
+    SDL_RenderCopy(renderer, sprite.texture.texture.get(), nullptr, &dst_rect);
+
+    if (present) {
+        SDL_RenderPresent(renderer);
+    }
 }
 
 void GraphicsSystem::render_sprite_centered_scaled(int screen_x, int screen_y, const Sprite& sprite,
@@ -627,7 +662,7 @@ void GraphicsSystem::render_sprite_top_clip_scaled(int screen_x, int screen_y, c
     // Proportional source crop: take only the top fraction of the texture.
     int tex_w = 0;
     int tex_h = 0;
-    SDL_QueryTexture(sprite.texture.texture, nullptr, nullptr, &tex_w, &tex_h);
+    SDL_QueryTexture(sprite.texture.texture.get(), nullptr, nullptr, &tex_w, &tex_h);
     if (tex_w <= 0 || tex_h <= 0) {
         return;
     }
@@ -644,7 +679,8 @@ void GraphicsSystem::render_sprite_top_clip_scaled(int screen_x, int screen_y, c
     SDL_Rect src_rect = {0, 0, tex_w, src_h};
     SDL_Rect dst_rect = {dest_x, dest_y, width, clamped_clip_height};
     SDL_RendererFlip flip = flip_h ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
-    SDL_RenderCopyEx(renderer, sprite.texture.texture, &src_rect, &dst_rect, 0, nullptr, flip);
+    SDL_RenderCopyEx(renderer, sprite.texture.texture.get(), &src_rect, &dst_rect, 0, nullptr,
+                     flip);
 }
 
 void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& text,
@@ -653,7 +689,7 @@ void GraphicsSystem::render_text(int screen_x, int screen_y, const std::string& 
         return;  // Font not available
     }
 
-    SDL_Surface* surface = TTF_RenderText_Solid(debug_font, text.c_str(), color);
+    SDL_Surface* surface = TTF_RenderText_Solid(debug_font->font, text.c_str(), color);
     if (surface == nullptr) {
         return;
     }
@@ -743,43 +779,22 @@ SDL_Rect GraphicsSystem::compute_letterbox_rect(SDL_Renderer* renderer) {
 }
 
 void GraphicsSystem::cleanup() {
+    // Tilesets/sprites/enemy data release automatically: TextureInfo textures
+    // are shared_ptr-owned (SDL_DestroyTexture attached as the deleter), and
+    // enemy sprite data is owned by value in the map. Clearing the containers
+    // drops the last references.
+
     // Clean up tilesets
-    for (auto& pair : tilesets) {
-        pair.second.cleanup();
-    }
     tilesets.clear();
 
     // Clean up sprites
-    for (auto& pair : sprites) {
-        if (pair.second.texture.texture) {
-            SDL_DestroyTexture(pair.second.texture.texture);
-        }
-    }
     sprites.clear();
 
     // Clean up enemy sprites
-    for (auto& pair : enemy_sprites) {
-        if (pair.second) {
-            for (auto& frame : pair.second->frames_left) {
-                if (frame.texture) {
-                    SDL_DestroyTexture(frame.texture);
-                }
-            }
-            for (auto& frame : pair.second->frames_right) {
-                if (frame.texture) {
-                    SDL_DestroyTexture(frame.texture);
-                }
-            }
-            delete pair.second;
-        }
-    }
     enemy_sprites.clear();
 
-    // Clean up fonts
-    if (debug_font != nullptr) {
-        TTF_CloseFont(debug_font);
-        debug_font = nullptr;
-    }
+    // Clean up fonts (shared_ptr's TTF_CloseFont deleter handles the font)
+    debug_font.reset();
     if (ttf_inited) {
         TTF_Quit();
         ttf_inited = false;
@@ -793,10 +808,6 @@ void GraphicsSystem::cleanup() {
 }
 
 void Tileset::cleanup() {
-    for (auto& pair : tiles) {
-        if (pair.second.texture) {
-            SDL_DestroyTexture(pair.second.texture);
-        }
-    }
+    // TextureInfo textures release automatically through the shared_ptr.
     tiles.clear();
 }

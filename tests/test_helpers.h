@@ -19,12 +19,7 @@
 #include "../include/player_teleport.h"
 #include "../include/title_sequence.h"
 #include "../include/ui_system.h"
-
-// Test case structure
-struct TestCase {
-    std::string name;
-    void (*run)() = nullptr;
-};
+#include "test_cases.h"
 
 // Shared game state is declared in game_state.h and defined in src/game_state.cpp
 // (part of comic_core); the tests link against the real definitions instead of
@@ -39,6 +34,7 @@ extern int failures;
 void check(bool condition, const std::string& message);
 Animation make_animation(const std::vector<int>& durations, bool looping);
 void reset_physics_state();
+void reset_item_flags();  // Zero player inventory globals (comic_has_*/comic_num_treasures/...)
 void reset_door_state();
 level_t* create_test_level_with_door(uint8_t door_x, uint8_t door_y, uint8_t target_level,
                                      uint8_t target_stage);

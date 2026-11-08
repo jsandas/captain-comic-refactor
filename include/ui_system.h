@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
+#include "game_constants.h"
 #include "graphics.h"
-#include "physics.h"  // MAX_HP and other shared gameplay constants
 
 /**
  * UISystem manages all HUD rendering during gameplay.
@@ -24,7 +24,10 @@ public:
         int fireball_meter_y;
     };
 
-    UISystem();
+    // Graphics system dependency: UI sprites load and render through the
+    // caller's graphics system (same explicit-pointer rule as ActorSystem and
+    // the title/sequence helpers - no reaching for the g_graphics global).
+    explicit UISystem(GraphicsSystem* graphics);
     ~UISystem();
 
     // Initialize UI system and load all required sprites
@@ -56,6 +59,9 @@ public:
 private:
     bool initialized;
     uint8_t inventory_animation_counter;
+
+    // Graphics system pointer: where HUD sprites are loaded from and drawn to.
+    GraphicsSystem* graphics;
 
     // Score digit sprites (0-9)
     std::vector<Sprite*> score_digit_sprites;
@@ -91,11 +97,11 @@ private:
                           bool has_teleport_wand, bool has_lantern, bool has_gems, bool has_crown,
                           bool has_gold, uint8_t jump_power);
 
-    // Helper to load sprite
-    static Sprite* load_ui_sprite(const std::string& sprite_name);
+    // Load a named non-directional UI sprite (through the graphics pointer).
+    Sprite* load_ui_sprite(const std::string& sprite_name);
 
-    // Helper to render sprite at position without direction
-    static void render_sprite_at(const Sprite* sprite, int x, int y, int width, int height);
+    // Render sprite at position without direction (through the graphics pointer).
+    void render_sprite_at(const Sprite* sprite, int x, int y, int width, int height) const;
 };
 
 #endif  // UI_SYSTEM_H

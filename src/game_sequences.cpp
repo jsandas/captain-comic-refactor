@@ -175,12 +175,10 @@ static void render_beam_in_frame(GameSequenceContext& context, bool show_comic,
     SDL_RenderSetViewport(renderer, &gameplay_frame_rect);
     SDL_RenderSetScale(renderer, letterbox_scale, letterbox_scale);
     context.ui->render_hud(
-        score_bytes, comic_num_lives, comic_hp, context.actors->fireball_meter,
-        context.actors->comic_firepower, context.actors->comic_has_corkscrew != 0,
-        comic_has_door_key != 0, context.actors->comic_has_teleport_wand != 0,
-        context.actors->comic_has_lantern != 0, context.actors->comic_has_gems != 0,
-        context.actors->comic_has_crown != 0, context.actors->comic_has_gold != 0,
-        comic_jump_power);
+        score_bytes, comic_num_lives, comic_hp, context.actors->get_fireball_meter(),
+        comic_firepower, comic_has_corkscrew != 0, comic_has_door_key != 0,
+        comic_has_teleport_wand != 0, comic_has_lantern != 0, comic_has_gems != 0,
+        comic_has_crown != 0, comic_has_gold != 0, comic_jump_power);
     SDL_RenderSetScale(renderer, 1.0f, 1.0f);
     SDL_RenderSetViewport(renderer, nullptr);
 
@@ -281,17 +279,9 @@ static bool wait_for_new_keypress(const GameSequenceContext& context) {
 
 // Draw the game-over sprite over the letterboxed gameplay frame.
 static void draw_game_over_sprite(GameSequenceContext& context, const Sprite* game_over_sprite) {
-    SDL_Renderer* renderer = context.renderer;
-    const SDL_Rect gameplay_frame_rect = GraphicsSystem::compute_letterbox_rect(renderer);
-    const float letterbox_scale = static_cast<float>(gameplay_frame_rect.w) / EGA_WIDTH;
-
-    const SDL_Rect game_over_rect = {
-        gameplay_frame_rect.x + static_cast<int>(GAME_OVER_X_EGA * letterbox_scale),
-        gameplay_frame_rect.y + static_cast<int>(GAME_OVER_Y_EGA * letterbox_scale),
-        static_cast<int>(GAME_OVER_WIDTH_EGA * letterbox_scale),
-        static_cast<int>(GAME_OVER_HEIGHT_EGA * letterbox_scale)};
-    SDL_RenderCopy(renderer, game_over_sprite->texture.texture, nullptr, &game_over_rect);
-    SDL_RenderPresent(renderer);
+    context.graphics->render_sprite_in_ega_frame(*game_over_sprite, GAME_OVER_X_EGA,
+                                                 GAME_OVER_Y_EGA, GAME_OVER_WIDTH_EGA,
+                                                 GAME_OVER_HEIGHT_EGA, /*present=*/true);
 }
 
 void play_intro_beam_in_sequence(GameSequenceContext& context) {
