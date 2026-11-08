@@ -188,6 +188,9 @@ members** (`comic_firepower`, `comic_has_corkscrew`, … and even actor context 
   `set_fireball_meter_for_test()`. `take_damage`/`collect_item` were not added as separate
   entry points: damage and collection happen inside the private tick pipeline, and no
   caller needs to invoke them directly.
+  Plus: new self-registered regression test
+  `test_enemy_leap_negative_velocity_floor_div` pins the LEAP ascent sar-delta sequence
+  (fails 4/4 against a truncating `/ 8`, passes with the floor-division fix).
 
 ---
 

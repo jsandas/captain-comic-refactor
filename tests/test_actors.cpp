@@ -675,3 +675,52 @@ REGISTER_TEST(test_item_special_items) {
     check(score_bytes[0] == 25 && score_bytes[1] == 2 && score_bytes[2] == 0,
           "special_items: shield at max lives should award 22500 points");
 }
+
+// Regression guard for the LEAP ascent delta: enemy_behavior_leap computes the
+// upward delta as a floor division (assembly `sar`, sar(-7, 3) == -1), NOT as
+// plain C truncating division where -7 / 8 == 0. A truncating `/ 8` would
+// cancel the leap entirely: the enemy never rises during the -7/-5/-3/-1
+// velocity phase. This test pins the exact tile-by-tile ascent trajectory.
+REGISTER_TEST(test_enemy_leap_negative_velocity_floor_div) {
+    reset_physics_state();
+    reset_item_flags();
+    ActorSystem actor_system;
+    actor_system.initialize();
+    reset_actor_state(actor_system);
+
+    // Zero-filled map: no solid tiles, so vertical movement is unobstructed.
+    const uint8_t* tiles = new uint8_t[128 * 10]();
+    auto& enemies = const_cast<std::vector<enemy_t>&>(actor_system.get_enemies());
+
+    // LEAP enemy already mid-jump (as if .begin_leap set y_vel = ENEMY_JUMP_VELOCITY).
+    setup_test_enemy(enemies, 0, ENEMY_BEHAVIOR_LEAP);
+    enemies[0].state = ENEMY_STATE_SPAWNED;
+    enemies[0].x = 10;
+    enemies[0].y = 10;
+    enemies[0].x_vel = 0;
+    enemies[0].y_vel = ENEMY_JUMP_VELOCITY;  // -7
+
+    comic_x = 0;
+    comic_y = 0;
+
+    // sar(-7,3) = -1, then gravity +2 → -5: each ascent tick moves up exactly 1.
+    // The truncating-division regression would keep y == 10 for all four ticks.
+    struct {
+        int8_t vel;
+        uint8_t y;
+    } expected[] = {
+        {-5, 9},  // tick 1: delta floor(-7/8) = -1, gravity → -5
+        {-3, 8},  // tick 2: delta floor(-5/8) = -1, gravity → -3
+        {-1, 7},  // tick 3: delta floor(-3/8) = -1, gravity → -1
+        {1, 6},   // tick 4: delta floor(-1/8) = -1 (nonzero remainder rounds down), gravity → +1
+    };
+
+    for (const auto& step : expected) {
+        actor_system.update(comic_x, comic_y, comic_facing, tiles, camera_x);
+        check(enemies[0].y == step.y, "enemy_leap_floor_div: ascent should follow sar deltas");
+        check(enemies[0].y_vel == step.vel,
+              "enemy_leap_floor_div: gravity must apply per ascent tick");
+    }
+
+    delete[] tiles;
+}
