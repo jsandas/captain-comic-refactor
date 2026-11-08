@@ -3,7 +3,7 @@
 quality: cppcheck format-check
 
 cppcheck:
-	@docker run --name cppcheck_container--rm -v ${PWD}:/workspace \
+	@docker run --name cppcheck_container --rm -v ${PWD}:/workspace \
 		--workdir /workspace \
 		--pull always \
 		alpine:edge \
