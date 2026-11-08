@@ -32,7 +32,7 @@ void begin_teleport();
  * Activates begin_teleport() on the rising edge of the teleport key, but only
  * when the player owns the teleport wand.
  */
-void process_teleport_input(bool comic_has_teleport_wand);
+void process_teleport_input(bool player_has_teleport_wand);
 
 /**
  * Advance the teleport animation by one tick.

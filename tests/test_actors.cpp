@@ -705,7 +705,7 @@ REGISTER_TEST(test_enemy_leap_negative_velocity_floor_div) {
 
     // sar(-7,3) = -1, then gravity +2 → -5: each ascent tick moves up exactly 1.
     // The truncating-division regression would keep y == 10 for all four ticks.
-    struct {
+    const struct {
         int8_t vel;
         uint8_t y;
     } expected[] = {
