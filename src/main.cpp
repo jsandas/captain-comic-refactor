@@ -363,15 +363,12 @@ int main(int argc, const char* argv[]) {
 
     // Persists between render frames; updated each tick when movement is attempted.
     bool player_moved_last_tick = false;
-    // True while airborne due to walking off an edge (not a jump).
-    bool player_airborne_from_walk_off = false;
 
     while (!quit) {
         uint32_t current_time = SDL_GetTicks();
         uint32_t delta_time = current_time - last_tick_time;
         last_tick_time = current_time;
         tick_accumulator += delta_time;
-        bool suppress_jump_animation_this_frame = false;
         if (tick_accumulator > MAX_ACCUMULATED_MS) {
             tick_accumulator = MAX_ACCUMULATED_MS;
         }
@@ -535,17 +532,6 @@ int main(int argc, const char* argv[]) {
                 // left/right movement AND the floor walk-off check for that tick.
                 const bool just_landed =
                     (was_falling_or_jumping != 0) && (comic_is_falling_or_jumping == 0);
-                if (just_landed) {
-                    player_airborne_from_walk_off = false;
-                }
-
-                // If physics transitioned from grounded to airborne using the
-                // no-floor path, suppress jump art for this render frame.
-                if (!was_falling_or_jumping && comic_is_falling_or_jumping &&
-                    comic_jump_counter == 1 && comic_y_vel == 8) {
-                    suppress_jump_animation_this_frame = true;
-                    player_airborne_from_walk_off = true;
-                }
 
                 // Ground movement (only when not in air AND did not just land this tick)
                 // Skipping on landing matches assembly: landing jumps past the left/right block
@@ -585,8 +571,6 @@ int main(int argc, const char* argv[]) {
 
                             comic_is_falling_or_jumping = 1;
                             comic_jump_counter = 1;
-                            suppress_jump_animation_this_frame = true;
-                            player_airborne_from_walk_off = true;
                         }
                     }
                 }
@@ -672,8 +656,7 @@ int main(int argc, const char* argv[]) {
                 } else {
                     current_animation = nullptr;
                 }
-            } else if (comic_is_falling_or_jumping && !suppress_jump_animation_this_frame &&
-                       !player_airborne_from_walk_off) {
+            } else if (comic_is_falling_or_jumping) {
                 current_animation = comic_facing ? &comic_jump_right : &comic_jump_left;
             } else {
                 if (player_moved_last_tick) {
