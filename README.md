@@ -146,6 +146,7 @@ The tests cover physics, rendering helpers, actors, audio, UI, and score handlin
 ## Features
 
 - Faithful 320x200 presentation with letterboxing
+- VSync-enabled SDL renderer for tear-free presentation
 - 8 playable levels with 3 stages each
 - Door logic, checkpoints, and level transitions
 - Five enemy AI types and respawn behavior
