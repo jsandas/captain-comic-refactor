@@ -823,7 +823,26 @@ int main(int argc, const char* argv[]) {
         bool comic_moves = false;
         if (comic_dx != 0) {
             if (comic_is_falling_or_jumping != 0) {
-                comic_moves = (comic_x_momentum != 0) && ((comic_x_momentum > 0) == (comic_dx > 0));
+                // Air: handle_fall_or_jump adds key input to momentum, then
+                // drag moves iff momentum is nonzero. A jump started with zero
+                // momentum and a held key nets to momentum 0 every tick
+                // (key +1, drag -1) yet STILL moves 1 unit per tick - so the
+                // continuation signal is momentum + key delta, not momentum
+                // alone (testing momentum alone disabled extrapolation for
+                // whole jumps, leaving raw 9.1 Hz stepping).
+                int next_momentum = comic_x_momentum;
+                if (key_state_left) {
+                    next_momentum--;
+                }
+                if (key_state_right) {
+                    next_momentum++;
+                }
+                if (next_momentum > 5) {
+                    next_momentum = 5;
+                } else if (next_momentum < -5) {
+                    next_momentum = -5;
+                }
+                comic_moves = (next_momentum != 0) && ((next_momentum > 0) == (comic_dx > 0));
             } else {
                 int move_intent = 0;
                 if (key_state_right && !key_state_left) {
@@ -842,9 +861,16 @@ int main(int argc, const char* argv[]) {
                                  : 0;
         const float target_comic_y =
             static_cast<float>(comic_y) + static_cast<float>(comic_dy) * smooth_alpha;
+        // The camera moves only as a consequence of the player moving (it is
+        // advanced inside move_left/move_right), so it is gated on the SAME
+        // continuation signal as the player. Extrapolating it independently
+        // made it keep sliding for a full tick interval after a stop, which
+        // dragged the player's screen position with it and read as the player
+        // snapping back. When the player stops, the camera stops that frame.
         const float target_camera_x =
             static_cast<float>(camera_x) +
-            static_cast<float>(camera_x - smooth_prev_camera_x) * smooth_alpha;
+            (comic_moves ? static_cast<float>(camera_x - smooth_prev_camera_x) * smooth_alpha
+                         : 0.0f);
 
         // Follow-smoothing: within-epsilon tracking renders exactly (zero
         // steady-state latency); when the render position is ahead of the sim

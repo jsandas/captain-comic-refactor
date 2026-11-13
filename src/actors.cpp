@@ -266,12 +266,13 @@ void ActorSystem::setup_enemies_for_stage(const level_t* level, int level_index,
  * every other tick) are never steady, so they render the exact post-tick
  * position - predicting them would overshoot and snap back at every tick
  * boundary. A formerly steady mover that stopped or reversed slides back to
- * the exact position via the follower's rollback instead of popping; only a
- * missing snapshot (spawn, stage load, dead fireball slot) hard-snaps, so no
- * stale position can glide into a new life.
+ * the exact position via the follower's rollback instead of popping; a
+ * missing snapshot (spawn, stage load, dead fireball slot) or any jump larger
+ * than snap_units (enemy respawn repositioning) hard-snaps, so no stale
+ * position can glide across the screen into a new life.
  */
 static float render_actor_pos(int curr, int prev, int last_delta, float smooth_alpha,
-                              float& follower) {
+                              float& follower, float snap_units = 0.0f) {
     if (prev < 0) {
         follower = static_cast<float>(curr);  // no snapshot: hard snap
         return follower;
@@ -282,11 +283,20 @@ static float render_actor_pos(int curr, int prev, int last_delta, float smooth_a
 
     if (steady) {
         const float target = static_cast<float>(curr) + static_cast<float>(delta) * smooth_alpha;
+        if (snap_units > 0.0f && std::fabs(target - follower) > snap_units) {
+            follower = target;  // teleport (respawn repositioning): hard snap
+            return follower;
+        }
         return smooth_follow_render_pos(follower, target, false, 3.0f);
     }
 
     // Exact sim position; the follower's rollback eases any overshoot out.
-    return smooth_follow_render_pos(follower, static_cast<float>(curr), false, 3.0f);
+    const float target = static_cast<float>(curr);
+    if (snap_units > 0.0f && std::fabs(target - follower) > snap_units) {
+        follower = target;  // teleport (respawn repositioning): hard snap
+        return follower;
+    }
+    return smooth_follow_render_pos(follower, target, false, 3.0f);
 }
 
 void ActorSystem::capture_render_snapshots() {
@@ -319,6 +329,8 @@ void ActorSystem::capture_render_snapshots() {
             fireball_prev_y[i] = -1;
             fireball_last_dx[i] = 0;
             fireball_last_dy[i] = 0;
+            fireball_render_x[i] = SMOOTH_RENDER_POS_UNSET;
+            fireball_render_y[i] = SMOOTH_RENDER_POS_UNSET;
             continue;
         }
         const int curr_x = static_cast<int>(fireballs[i].x);
@@ -411,15 +423,20 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, float cam_x, i
 
         // Steady-motion-gated extrapolation + follow-smoothing (see
         // render_actor_pos): throttled movers, reversals, and respawns render
-        // the exact post-tick position; steady movers extrapolate.
+        // the exact post-tick position; steady movers extrapolate. Jumps
+        // beyond ENEMY_SMOOTH_SNAP_UNITS are respawn repositioning (the enemy
+        // spawner moves despawned actors to the next off-screen spawn point),
+        // which hard-snaps instead of gliding the sprite across the screen.
         const int prev_x = (enemy_index < enemy_prev_x.size()) ? enemy_prev_x[enemy_index] : -1;
         const int prev_y = (enemy_index < enemy_prev_y.size()) ? enemy_prev_y[enemy_index] : -1;
         const int last_dx = (enemy_index < enemy_last_dx.size()) ? enemy_last_dx[enemy_index] : 0;
         const int last_dy = (enemy_index < enemy_last_dy.size()) ? enemy_last_dy[enemy_index] : 0;
-        const float enemy_smooth_x = render_actor_pos(static_cast<int>(enemy.x), prev_x, last_dx,
-                                                      smooth_alpha, enemy_render_x[enemy_index]);
-        const float enemy_smooth_y = render_actor_pos(static_cast<int>(enemy.y), prev_y, last_dy,
-                                                      smooth_alpha, enemy_render_y[enemy_index]);
+        const float enemy_smooth_x =
+            render_actor_pos(static_cast<int>(enemy.x), prev_x, last_dx, smooth_alpha,
+                             enemy_render_x[enemy_index], ENEMY_SMOOTH_SNAP_UNITS);
+        const float enemy_smooth_y =
+            render_actor_pos(static_cast<int>(enemy.y), prev_y, last_dy, smooth_alpha,
+                             enemy_render_y[enemy_index], ENEMY_SMOOTH_SNAP_UNITS);
 
         const float enemy_screen_x = (enemy_smooth_x - cam_x) * render_scale + render_scale;
         const float enemy_screen_y = enemy_smooth_y * render_scale + render_scale;
@@ -1638,17 +1655,19 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, float cam_x,
             continue;
         }
 
-        // Steady-motion-gated extrapolation + follow-smoothing (see
-        // render_actor_pos). The spawn tick follows the dead-slot snapshot
-        // (-1) so it is never "steady": the fireball renders exactly at its
-        // spawn height instead of gliding from the slot's previous shot.
-        // Corkscrew y-oscillation alternates deltas, so y renders exact too.
-        const int prev_x = (fb_index < fireball_prev_x.size()) ? fireball_prev_x[fb_index] : -1;
+        // The fireball's horizontal velocity is CONSTANT every tick it is
+        // alive (handle_fireballs applies fb.vel unconditionally), so x
+        // extrapolates from the sim's own velocity from the very first flight
+        // tick - no two-tick "steady" warm-up, which rendered exact (unfilled)
+        // positions and read as the fireball freezing in place after spawn.
+        // Corkscrew y alternates ±1 per tick, which is never steady, so y
+        // renders the exact stepping position like the original.
         const int prev_y = (fb_index < fireball_prev_y.size()) ? fireball_prev_y[fb_index] : -1;
-        const int last_dx = (fb_index < fireball_last_dx.size()) ? fireball_last_dx[fb_index] : 0;
         const int last_dy = (fb_index < fireball_last_dy.size()) ? fireball_last_dy[fb_index] : 0;
-        const float fb_smooth_x = render_actor_pos(static_cast<int>(fb.x), prev_x, last_dx,
-                                                   smooth_alpha, fireball_render_x[fb_index]);
+        const float fb_target_x =
+            static_cast<float>(fb.x) + static_cast<float>(fb.vel) * smooth_alpha;
+        const float fb_smooth_x =
+            smooth_follow_render_pos(fireball_render_x[fb_index], fb_target_x, false, 3.0f);
         const float fb_smooth_y = render_actor_pos(static_cast<int>(fb.y), prev_y, last_dy,
                                                    smooth_alpha, fireball_render_y[fb_index]);
 

@@ -41,6 +41,14 @@ constexpr uint8_t MAX_FIREBALL_METER = 12;         /* Full fireball meter value 
 constexpr uint8_t FIREBALL_METER_COUNTER_INIT = 2; /* Counter cycles 2→1→2→1 */
 constexpr uint8_t FIREBALL_NUM_FRAMES = 2;         /* Two animation frames per fireball */
 
+/* Smooth-render follower snap threshold (game units). Legit prediction misses
+ * never exceed ~1.5 units (one per-tick movement plus rollback residue);
+ * anything larger is a teleport - most importantly enemy respawn
+ * repositioning, which moves a despawned enemy to the next off-screen spawn
+ * point. Those render at the exact new position instead of gliding across the
+ * screen from the old one. */
+constexpr float ENEMY_SMOOTH_SNAP_UNITS = 4.0f;
+
 /* Enemy facing directions - frame offsets for sprite animation
  * Left-facing frames: 0-4, Right-facing frames: 5-9
  * These values are added to the current animation frame index */
