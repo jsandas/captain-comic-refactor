@@ -94,10 +94,17 @@ int main(int argc, const char* argv[]) {
             std::cout << "Debug mode enabled" << std::endl;
         } else if (std::strcmp(argv[i], "--skip-title") == 0) {
             skip_title = true;
+        } else if (std::strcmp(argv[i], "--smooth") == 0) {
+            // Smooth rendering: extrapolate positions between the ~9.1 Hz game
+            // ticks for 60 Hz motion (see game_state.h). Gameplay logic and its
+            // tick cadence are untouched.
+            smooth_rendering_enabled = true;
         } else if (std::strcmp(argv[i], "--help") == 0) {
             std::cout << "Captain Comic - Usage:" << std::endl;
             std::cout << "  --debug       Enable debug mode and cheat keys" << std::endl;
             std::cout << "  --skip-title  Skip the title sequence" << std::endl;
+            std::cout << "  --smooth      Smooth rendering (extrapolate motion between ticks)"
+                      << std::endl;
             std::cout << "  --help        Show this help message" << std::endl;
             return 0;
         }
@@ -151,6 +158,15 @@ int main(int argc, const char* argv[]) {
         std::cerr << "Renderer could not be created! SDL_Error: " << SDL_GetError() << std::endl;
         return cleanup_and_exit(1);
     }
+
+    // Frame pacing: with a vsynced renderer, SDL_RenderPresent already blocks
+    // until vblank and paces the loop - any extra fixed delay over-sleeps past
+    // the next vblank and produces irregular ~30 FPS frame times (the whole
+    // scene visibly snaps one frame). Only fall back to delay-based pacing
+    // when vsync is absent.
+    SDL_RendererInfo renderer_info;
+    const bool vsync_active = (SDL_GetRendererInfo(renderer, &renderer_info) == 0) &&
+                              (renderer_info.flags & SDL_RENDERER_PRESENTVSYNC) != 0;
 
     // Initialize graphics system
     g_graphics = new GraphicsSystem(renderer);
@@ -364,10 +380,19 @@ int main(int argc, const char* argv[]) {
     // Persists between render frames; updated each tick when movement is attempted.
     bool player_moved_last_tick = false;
 
+    // Persistent smooth-render positions for player and camera (follow-
+    // smoothing; see game_state.h). SMOOTH_RENDER_POS_UNSET makes the first
+    // rendered frame snap to the extrapolated target.
+    float smooth_render_comic_x = SMOOTH_RENDER_POS_UNSET;
+    float smooth_render_comic_y = SMOOTH_RENDER_POS_UNSET;
+    float smooth_render_camera_x = SMOOTH_RENDER_POS_UNSET;
+    bool smooth_render_snapped_this_frame = false;
+
     while (!quit) {
         uint32_t current_time = SDL_GetTicks();
         uint32_t delta_time = current_time - last_tick_time;
         last_tick_time = current_time;
+        smooth_frame_delta_ms = static_cast<float>(delta_time);
         tick_accumulator += delta_time;
         if (tick_accumulator > MAX_ACCUMULATED_MS) {
             tick_accumulator = MAX_ACCUMULATED_MS;
@@ -429,6 +454,15 @@ int main(int argc, const char* argv[]) {
                     key_state_teleport = 1;
                 }
 
+                // Debug toggle for smooth rendering (extrapolation between
+                // ticks). Requesting a snap resyncs the prev-tick snapshots to
+                // the live positions so the first frame after toggling on
+                // never extrapolates from stale state.
+                if (debug_mode && key == SDLK_F6 && e.key.repeat == 0) {
+                    smooth_rendering_enabled = !smooth_rendering_enabled;
+                    smooth_render_snap_requested = true;
+                }
+
                 // Process cheat keys (only active if --debug flag set)
                 g_cheats->process_input(cheat_key_from_sdl(e.key.keysym.sym));
             } else if (e.type == SDL_KEYUP) {
@@ -470,6 +504,14 @@ int main(int argc, const char* argv[]) {
             while (tick_accumulator >= MS_PER_GAME_TICK && ticks_processed < MAX_TICKS_PER_FRAME) {
                 tick_accumulator -= MS_PER_GAME_TICK;
                 ticks_processed++;
+
+                // Smooth-render snapshots: record the pre-tick state so the
+                // renderer can extrapolate between ticks. Must run on EVERY
+                // tick (including the early-continue branches below) so the
+                // deltas never go stale while positions rest.
+                smooth_prev_comic_x = comic_x;
+                smooth_prev_camera_x = camera_x;
+                actor_system.capture_render_snapshots();
 
                 // Per-tick movement result must be cleared before any early-continue
                 // branches (death, door anim, teleport) to avoid stale run state.
@@ -685,6 +727,28 @@ int main(int argc, const char* argv[]) {
             }
         }
 
+        // Consume a requested render snap (respawn, stage load, F6 toggle):
+        // align the prev-tick snapshots with the live positions so the next
+        // frame renders exactly the new state instead of extrapolating a
+        // position jump.
+        if (smooth_render_snap_requested) {
+            smooth_prev_comic_x = comic_x;
+            smooth_prev_camera_x = camera_x;
+            actor_system.reset_render_snapshots();
+            smooth_render_snap_requested = false;
+            smooth_render_snapped_this_frame = true;
+        }
+
+        // Elapsed fraction of the current game tick (0 right after a tick
+        // fires, approaching 1 just before the next one). With smooth
+        // rendering disabled it stays 0 and every draw below renders the
+        // exact integer game state, identical to the legacy renderer.
+        float smooth_alpha = 0.0f;
+        if (smooth_rendering_enabled) {
+            smooth_alpha =
+                static_cast<float>(std::clamp(tick_accumulator / MS_PER_GAME_TICK, 0.0, 1.0));
+        }
+
         // Clear screen with black background
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
@@ -739,6 +803,62 @@ int main(int argc, const char* argv[]) {
 
         Tileset* tileset = cached_tileset;
 
+        // Extrapolated target positions for this frame (smooth rendering).
+        // Player-x speculation is additionally gated on the sim's own
+        // continuation signals, so it never outruns a stop:
+        //
+        // - Grounded motion continues only while a movement key is held in
+        //   the same direction (ground movement is key-gated in the tick
+        //   pipeline); when the key releases, speculation stops that frame.
+        // - Airborne motion continues only while momentum carries it (air
+        //   movement is momentum-driven with per-tick drag).
+        // - Player y uses the sim's own velocity: handle_fall_or_jump
+        //   integrates delta_y = comic_y_vel >> 3 per tick, so that value is
+        //   the sim's next displacement. Grounded Comic is exactly at rest.
+        // - The camera mirrors the player's x motion one tick at a time.
+        //
+        // smooth_alpha is 0 with smoothing disabled, collapsing everything to
+        // the exact integer game state.
+        const int comic_dx = comic_x - smooth_prev_comic_x;
+        bool comic_moves = false;
+        if (comic_dx != 0) {
+            if (comic_is_falling_or_jumping != 0) {
+                comic_moves = (comic_x_momentum != 0) && ((comic_x_momentum > 0) == (comic_dx > 0));
+            } else {
+                int move_intent = 0;
+                if (key_state_right && !key_state_left) {
+                    move_intent = 1;
+                } else if (key_state_left && !key_state_right) {
+                    move_intent = -1;
+                }
+                comic_moves = (move_intent == comic_dx);
+            }
+        }
+        const float target_comic_x =
+            static_cast<float>(comic_x) +
+            (comic_moves ? static_cast<float>(comic_dx) * smooth_alpha : 0.0f);
+        const int comic_dy = (comic_is_falling_or_jumping != 0 && !is_player_dying())
+                                 ? (static_cast<int>(comic_y_vel) >> 3)
+                                 : 0;
+        const float target_comic_y =
+            static_cast<float>(comic_y) + static_cast<float>(comic_dy) * smooth_alpha;
+        const float target_camera_x =
+            static_cast<float>(camera_x) +
+            static_cast<float>(camera_x - smooth_prev_camera_x) * smooth_alpha;
+
+        // Follow-smoothing: within-epsilon tracking renders exactly (zero
+        // steady-state latency); when the render position is ahead of the sim
+        // (stop, landing, reversal) it slides back at a fixed speed instead
+        // of popping for a frame.
+        const float render_comic_x = smooth_follow_render_pos(smooth_render_comic_x, target_comic_x,
+                                                              smooth_render_snapped_this_frame);
+        const float render_comic_y = smooth_follow_render_pos(
+            smooth_render_comic_y, target_comic_y, smooth_render_snapped_this_frame,
+            3.0f);  // vertical: up to ~2 units/tick at terminal velocity
+        const float render_camera_x = smooth_follow_render_pos(
+            smooth_render_camera_x, target_camera_x, smooth_render_snapped_this_frame);
+        smooth_render_snapped_this_frame = false;
+
         // Render tiles with offscreen margin for seamless scrolling.
         // The C code pre-renders into a 256-byte-wide buffer; we render tiles
         // slightly outside the visible playfield and let viewport clipping
@@ -756,10 +876,11 @@ int main(int argc, const char* argv[]) {
                 if (world_x + 2 > min_visible_x && world_x < max_visible_x) {
                     uint8_t tile = get_tile_at(tx * 2, ty * 2);
 
-                    int screen_x = (world_x - camera_x) * render_scale;
-                    int screen_y = ty * 2 * render_scale;
+                    const float screen_x = (world_x - render_camera_x) * render_scale;
+                    const int screen_y = ty * 2 * render_scale;
 
-                    g_graphics->render_tile(screen_x, screen_y, tileset, tile, render_scale);
+                    g_graphics->render_tile_f(screen_x, static_cast<float>(screen_y), tileset, tile,
+                                              render_scale);
                 }
             }
         }
@@ -784,8 +905,9 @@ int main(int argc, const char* argv[]) {
 
             const int tile_w = render_scale * 2;
             const int tile_h = render_scale * 2;
-            const int screen_x = (static_cast<int>(door_world_x) - camera_x) * render_scale;
-            const int screen_y = static_cast<int>(door_world_y) * render_scale;
+            const float screen_x =
+                (static_cast<float>(door_world_x) - render_camera_x) * render_scale;
+            const float screen_y = static_cast<float>(door_world_y) * render_scale;
 
             const bool can_draw_tiles =
                 tileset != nullptr && current_level_ptr != nullptr && tile_w >= 2;
@@ -797,8 +919,9 @@ int main(int argc, const char* argv[]) {
             SDL_GetRenderDrawColor(renderer, &prev_r, &prev_g, &prev_b, &prev_a);
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 
-            SDL_Rect door_rect = {screen_x, screen_y, tile_w * 2, tile_h * 2};
-            SDL_RenderFillRect(renderer, &door_rect);
+            const SDL_FRect door_rect = {screen_x, screen_y, static_cast<float>(tile_w * 2),
+                                         static_cast<float>(tile_h * 2)};
+            SDL_RenderFillRectF(renderer, &door_rect);
 
             if (can_draw_tiles) {
                 const uint8_t tile_ul = current_level_ptr->door_tile_ul;
@@ -816,11 +939,12 @@ int main(int argc, const char* argv[]) {
                         return;
                     }
 
-                    const int tile_screen_x = (world_tile_x - camera_x) * render_scale;
-                    const int tile_screen_y = world_tile_y * render_scale;
+                    const float tile_screen_x =
+                        (static_cast<float>(world_tile_x) - render_camera_x) * render_scale;
+                    const float tile_screen_y = static_cast<float>(world_tile_y) * render_scale;
                     const uint8_t tile_id = get_tile_at(world_tile_x, world_tile_y);
-                    g_graphics->render_tile(tile_screen_x, tile_screen_y, tileset, tile_id,
-                                            render_scale);
+                    g_graphics->render_tile_f(tile_screen_x, tile_screen_y, tileset, tile_id,
+                                              render_scale);
                 };
 
                 int shift = 0;
@@ -831,16 +955,16 @@ int main(int argc, const char* argv[]) {
                     shift = tile_w / 2;
                 }
 
-                const int left_col_x = screen_x - shift;
-                const int right_col_x = screen_x + tile_w + shift;
+                const float left_col_x = screen_x - shift;
+                const float right_col_x = screen_x + tile_w + shift;
 
                 // Each door leaf is one full tile column (2 game units wide).
-                g_graphics->render_tile(left_col_x, screen_y, tileset, tile_ul, render_scale);
-                g_graphics->render_tile(left_col_x, screen_y + tile_h, tileset, tile_ll,
-                                        render_scale);
-                g_graphics->render_tile(right_col_x, screen_y, tileset, tile_ur, render_scale);
-                g_graphics->render_tile(right_col_x, screen_y + tile_h, tileset, tile_lr,
-                                        render_scale);
+                g_graphics->render_tile_f(left_col_x, screen_y, tileset, tile_ul, render_scale);
+                g_graphics->render_tile_f(left_col_x, screen_y + tile_h, tileset, tile_ll,
+                                          render_scale);
+                g_graphics->render_tile_f(right_col_x, screen_y, tileset, tile_ur, render_scale);
+                g_graphics->render_tile_f(right_col_x, screen_y + tile_h, tileset, tile_lr,
+                                          render_scale);
 
                 // Redraw the wall columns beside the doorway so the leaves slide
                 // behind the surrounding tiles instead of overlapping them.
@@ -859,8 +983,8 @@ int main(int argc, const char* argv[]) {
 
         render_door_animation_overlay(false);
 
-        actor_system.render_enemies(g_graphics, camera_x, render_scale);
-        actor_system.render_fireballs(g_graphics, camera_x, render_scale);
+        actor_system.render_enemies(g_graphics, render_camera_x, render_scale, smooth_alpha);
+        actor_system.render_fireballs(g_graphics, render_camera_x, render_scale, smooth_alpha);
 
         // Render player sprite
         if (current_animation && door_player_visible) {
@@ -868,25 +992,27 @@ int main(int argc, const char* argv[]) {
             if (frame) {
                 // Center player on screen relative to camera
                 // Player is 2 units wide, 4 units tall in game coords
-                int screen_x = (comic_x - camera_x) * render_scale + render_scale;  // Center X
-                int screen_y = comic_y * render_scale + render_scale * 2;           // Center Y
-                int player_width = render_scale * 2;
+                const float screen_x =
+                    (render_comic_x - render_camera_x) * render_scale + render_scale;  // Center X
+                const float screen_y =
+                    render_comic_y * render_scale + render_scale * 2;  // Center Y
+                const int player_width = render_scale * 2;
                 const int player_full_height = render_scale * 4;
                 if (should_clip_player_death_render()) {
                     // Compute how much of the sprite still fits within the playfield
                     // viewport so the sinking effect matches natural SDL clipping.
-                    // sprite_top_y == comic_y * render_scale (center Y - half height).
-                    const int sprite_top_y = screen_y - player_full_height / 2;
-                    const int clip_h =
-                        std::clamp(playfield_viewport.h - sprite_top_y, 0, player_full_height);
-                    if (clip_h > 0) {
-                        g_graphics->render_sprite_top_clip_scaled(screen_x, screen_y, frame->sprite,
-                                                                  player_width, player_full_height,
-                                                                  clip_h);
+                    // sprite_top_y == render_comic_y * render_scale (center Y - half height).
+                    const float sprite_top_y = screen_y - player_full_height / 2.0f;
+                    const float clip_h = std::clamp(playfield_viewport.h - sprite_top_y, 0.0f,
+                                                    static_cast<float>(player_full_height));
+                    if (clip_h > 0.0f) {
+                        g_graphics->render_sprite_top_clip_scaled_f(screen_x, screen_y,
+                                                                    frame->sprite, player_width,
+                                                                    player_full_height, clip_h);
                     }
                 } else {
-                    g_graphics->render_sprite_centered_scaled(screen_x, screen_y, frame->sprite,
-                                                              player_width, player_full_height);
+                    g_graphics->render_sprite_centered_scaled_f(screen_x, screen_y, frame->sprite,
+                                                                player_width, player_full_height);
                 }
             }
         }
@@ -897,25 +1023,28 @@ int main(int argc, const char* argv[]) {
             const uint8_t last_teleport_frame = static_cast<uint8_t>(teleport_sprites.size() - 1);
             const uint8_t source_frame = std::min(teleport_animation, last_teleport_frame);
             if (teleport_sprites[source_frame]) {
-                int source_screen_x =
-                    (static_cast<int>(teleport_source_x) - camera_x) * render_scale + render_scale;
-                int source_screen_y =
-                    static_cast<int>(teleport_source_y) * render_scale + render_scale * 2;
-                g_graphics->render_sprite_centered_scaled(source_screen_x, source_screen_y,
-                                                          *teleport_sprites[source_frame],
-                                                          render_scale * 2, render_scale * 4);
+                const float source_screen_x =
+                    (static_cast<float>(teleport_source_x) - render_camera_x) * render_scale +
+                    render_scale;
+                const float source_screen_y =
+                    static_cast<float>(teleport_source_y) * render_scale + render_scale * 2;
+                g_graphics->render_sprite_centered_scaled_f(source_screen_x, source_screen_y,
+                                                            *teleport_sprites[source_frame],
+                                                            render_scale * 2, render_scale * 4);
             }
 
             if (teleport_animation >= 1) {
                 const uint8_t destination_phase = static_cast<uint8_t>(teleport_animation - 1);
                 const uint8_t dest_frame = std::min(destination_phase, last_teleport_frame);
                 if (teleport_sprites[dest_frame]) {
-                    int destination_screen_x =
-                        (static_cast<int>(teleport_destination_x) - camera_x) * render_scale +
+                    const float destination_screen_x =
+                        (static_cast<float>(teleport_destination_x) - render_camera_x) *
+                            render_scale +
                         render_scale;
-                    int destination_screen_y =
-                        static_cast<int>(teleport_destination_y) * render_scale + render_scale * 2;
-                    g_graphics->render_sprite_centered_scaled(
+                    const float destination_screen_y =
+                        static_cast<float>(teleport_destination_y) * render_scale +
+                        render_scale * 2;
+                    g_graphics->render_sprite_centered_scaled_f(
                         destination_screen_x, destination_screen_y, *teleport_sprites[dest_frame],
                         render_scale * 2, render_scale * 4);
                 }
@@ -924,7 +1053,7 @@ int main(int argc, const char* argv[]) {
 
         // Assembly-faithful order: items are rendered after Comic, so with painter's
         // algorithm they appear on top when overlapping.
-        actor_system.render_item(g_graphics, camera_x, render_scale);
+        actor_system.render_item(g_graphics, render_camera_x, render_scale);
 
         // Restore full renderer viewport before rendering debug overlay.
         SDL_RenderSetViewport(renderer, nullptr);
@@ -954,11 +1083,15 @@ int main(int argc, const char* argv[]) {
         // Present
         SDL_RenderPresent(renderer);
 
-        // Cap rendering to ~60 FPS while physics runs at ~9.1 Hz
-        if (tick_accumulator >= MS_PER_GAME_TICK) {
-            SDL_Delay(0);
-        } else {
+        // Cap rendering to ~60 FPS while physics runs at ~9.1 Hz.
+        // With vsync, SDL_RenderPresent above already blocks on vblank and
+        // paces the loop; an extra delay here would over-sleep past the next
+        // vblank and stutter the frame cadence. Without vsync, keep the
+        // legacy delay-based cap.
+        if (!vsync_active) {
             SDL_Delay(16);
+        } else if (tick_accumulator >= MS_PER_GAME_TICK) {
+            SDL_Delay(0);
         }
     }
 

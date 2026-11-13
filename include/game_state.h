@@ -1,6 +1,7 @@
 #ifndef GAME_STATE_H
 #define GAME_STATE_H
 
+#include <cmath>
 #include <cstdint>
 
 // Forward declarations keep this header light: game_state.h is included by every
@@ -71,6 +72,84 @@ extern uint8_t previous_key_state_teleport;  // Track previous teleport key stat
 
 // --- Camera ---
 extern int camera_x;  // Left edge of the visible playfield, in game units
+
+// --- Smooth rendering (extrapolation between game ticks) ---
+//
+// The renderer normally presents the exact post-tick integer state, so all
+// motion visibly steps at the ~9.1 Hz game tick rate. When
+// smooth_rendering_enabled is set, the renderer instead extrapolates from the
+// last two tick snapshots: render_pos = curr + (curr - prev) * alpha, where
+// alpha is the elapsed fraction of the current tick. Extrapolation (unlike
+// interpolation) adds no input latency: the newest tick state is shown
+// immediately and continued forward at its known velocity, which is exact for
+// this game's constant per-tick motion. The 9.1 Hz gameplay logic, physics,
+// and collision behavior are untouched.
+//
+// The prev_* values are the positions as they were at the START of the most
+// recent game tick; only the renderer reads them. Prediction is gated on the
+// simulation's own state (see main.cpp): player x only extrapolates while the
+// last tick actually moved, player y uses the sim's own comic_y_vel while
+// airborne, and actors only extrapolate steady (repeated) movement - so
+// stops, throttled movers, spawns, and respawns render exact positions and
+// never overshoot. Discontinuities (respawn, stage load, toggle) request a
+// one-frame snap via smooth_render_snap_requested.
+extern bool smooth_rendering_enabled;      // --smooth flag / debug F6 toggle
+extern int smooth_prev_comic_x;            // comic_x one tick ago
+extern int smooth_prev_camera_x;           // camera_x one tick ago
+extern bool smooth_render_snap_requested;  // snap prev to curr on next render
+extern float smooth_frame_delta_ms;        // last frame's length in ms (render pacing)
+
+// Follow-smoothing for the smooth renderer. The extrapolated target can be
+// wrong by up to one per-tick movement when the simulation stops or reverses
+// (walk stop, landing, wall bump, enemy bounce); the rendered position may
+// then sit slightly AHEAD of the sim. Each rendered entity keeps a persistent
+// render position that follows the extrapolated target:
+// - errors within SMOOTH_TRACK_EPS_UNITS render exactly (zero steady-state
+//   latency while tracking),
+// - larger forward gaps catch up quickly (SMOOTH_CATCHUP_RATE per frame),
+// - being ahead of the sim rolls back at a fixed speed (rollback_speed game
+//   units per tick interval) instead of popping, so stops read as a brief
+//   settle rather than a snap.
+constexpr float SMOOTH_TRACK_EPS_UNITS = 0.35f;  // in game units
+constexpr float SMOOTH_CATCHUP_RATE = 0.40f;     // fraction of large forward error per frame
+constexpr float SMOOTH_ROLLBACK_SPEED = 1.5f;    // default rollback speed, units per tick interval
+constexpr float SMOOTH_RENDER_POS_UNSET = -1000.0f;
+
+// Render pacing info: elapsed milliseconds of the most recent frame, set by
+// the main loop so rollback speed is frame-rate independent. Render-only.
+extern float smooth_frame_delta_ms;
+
+/**
+ * Advance one persistent smooth-render position toward its extrapolated
+ * target (see the follow-smoothing comment above). `snap` forces an exact
+ * render (explicit snap request, first frame, or smoothing disabled).
+ * rollback_speed is this axis's rollback speed in game units per tick
+ * interval; scale it to how fast the axis moves (falls move faster than
+ * walks).
+ */
+inline float smooth_follow_render_pos(float& pos, float target, bool snap,
+                                      float rollback_speed = SMOOTH_ROLLBACK_SPEED) {
+    if (snap || pos == SMOOTH_RENDER_POS_UNSET || !smooth_rendering_enabled) {
+        pos = target;
+        return pos;
+    }
+
+    const float error = target - pos;
+    if (error >= 0.0f) {
+        // Behind the target: track exactly while close (steady motion keeps
+        // the per-frame gap below the epsilon), catch up quickly otherwise.
+        if (error <= SMOOTH_TRACK_EPS_UNITS) {
+            pos = target;
+        } else {
+            pos += error * SMOOTH_CATCHUP_RATE;
+        }
+    } else {
+        // Ahead of the sim (stop / landing / reversal): slide back smoothly.
+        const float step = rollback_speed * (smooth_frame_delta_ms / MS_PER_GAME_TICK);
+        pos += (error >= -step) ? error : -step;
+    }
+    return pos;
+}
 
 // --- Items / lives / HP / score ---
 // Player inventory flags live here once (like comic_has_door_key): collected

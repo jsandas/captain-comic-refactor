@@ -214,4 +214,9 @@ void load_new_stage() {
             camera_x = MAP_WIDTH - PLAYFIELD_WIDTH;
         }
     }
+
+    // Smooth rendering: a stage load repositions Comic (and the camera), so
+    // ask the renderer to snap its prev-tick snapshots to the new state
+    // instead of extrapolating across the position jump.
+    smooth_render_snap_requested = true;
 }

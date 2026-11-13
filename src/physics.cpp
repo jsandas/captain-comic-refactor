@@ -112,6 +112,10 @@ void update_player_death_sequence() {
         comic_jump_counter = comic_jump_power;
         comic_hp = MAX_HP;
 
+        // Smooth rendering: the respawn jump (death position -> checkpoint)
+        // must never be extrapolated; snap the renderer to the new state.
+        smooth_render_snap_requested = true;
+
         // Clear jump key state so holding jump during death does not trigger an
         // immediate jump on the first tick after respawn.
         key_state_jump = 0;

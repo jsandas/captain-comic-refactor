@@ -116,6 +116,11 @@ public:
 
     // Rendering
     void render_tile(int screen_x, int screen_y, Tileset* tileset, uint8_t tile_id, int scale);
+    // Float-position variants used by the smooth renderer (extrapolated
+    // positions are fractional). With integer coordinates these rasterize
+    // identically to the int variants, so the render path can always use them.
+    void render_tile_f(float screen_x, float screen_y, Tileset* tileset, uint8_t tile_id,
+                       int scale);
     void render_sprite(int screen_x, int screen_y, const Sprite& sprite, bool flip_h = false);
     void render_sprite_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                               int height, bool flip_h = false);
@@ -123,12 +128,21 @@ public:
                                                  bool flip_h = false);
     void render_sprite_centered_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
                                        int height, bool flip_h = false);
+    void render_sprite_centered_scaled_f(float screen_x, float screen_y, const Sprite& sprite,
+                                         int width, int height, bool flip_h = false);
     // Render a sprite cropped to its top `clip_height` screen-pixels, anchored so the
     // top of the sprite stays at the same position as a full-height blit would.
     // `full_height` is the screen height the complete sprite occupies (used for centering
     // and to compute the proportional source rect). `clip_height` must be <= full_height.
-    void render_sprite_top_clip_scaled(int screen_x, int screen_y, const Sprite& sprite, int width,
-                                       int full_height, int clip_height, bool flip_h = false);
+    [[maybe_unused]] void render_sprite_top_clip_scaled(int screen_x, int screen_y,
+                                                        const Sprite& sprite, int width,
+                                                        int full_height, int clip_height,
+                                                        bool flip_h = false);
+    // Float-position variant of render_sprite_top_clip_scaled; clip_height is
+    // fractional for the smooth renderer's sub-pixel sinking/death effects.
+    void render_sprite_top_clip_scaled_f(float screen_x, float screen_y, const Sprite& sprite,
+                                         int width, int full_height, float clip_height,
+                                         bool flip_h = false);
 
     // Render a full-screen-sequence sprite stretched over a sub-rect of the
     // letterboxed 320x200 EGA playfield frame (pause overlay, game-over sprite, ...).

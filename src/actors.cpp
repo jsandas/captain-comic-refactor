@@ -256,10 +256,100 @@ void ActorSystem::setup_enemies_for_stage(const level_t* level, int level_index,
 
     reset_for_stage();
     reset_fireballs();
+    reset_render_snapshots();
 }
 
-void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
-                                 int render_scale) const {
+/**
+ * Render one actor coordinate for the smooth renderer. Extrapolation runs
+ * ONLY for steady motion: this tick's delta (curr - prev) repeats the
+ * previous tick's delta and is nonzero. Movement-throttled actors (birds move
+ * every other tick) are never steady, so they render the exact post-tick
+ * position - predicting them would overshoot and snap back at every tick
+ * boundary. A formerly steady mover that stopped or reversed slides back to
+ * the exact position via the follower's rollback instead of popping; only a
+ * missing snapshot (spawn, stage load, dead fireball slot) hard-snaps, so no
+ * stale position can glide into a new life.
+ */
+static float render_actor_pos(int curr, int prev, int last_delta, float smooth_alpha,
+                              float& follower) {
+    if (prev < 0) {
+        follower = static_cast<float>(curr);  // no snapshot: hard snap
+        return follower;
+    }
+
+    const int delta = curr - prev;
+    const bool steady = (delta != 0 && delta == last_delta);
+
+    if (steady) {
+        const float target = static_cast<float>(curr) + static_cast<float>(delta) * smooth_alpha;
+        return smooth_follow_render_pos(follower, target, false, 3.0f);
+    }
+
+    // Exact sim position; the follower's rollback eases any overshoot out.
+    return smooth_follow_render_pos(follower, static_cast<float>(curr), false, 3.0f);
+}
+
+void ActorSystem::capture_render_snapshots() {
+    // Record the pre-tick positions. Capture happens before the tick's own
+    // mutations, so at render time (curr - prev) is exactly the movement this
+    // tick performed. last_dx/dy keep the movement of the tick before that,
+    // letting the renderer detect steady (repeated) movement.
+    enemy_prev_x.resize(enemies.size());
+    enemy_prev_y.resize(enemies.size());
+    enemy_last_dx.resize(enemies.size());
+    enemy_last_dy.resize(enemies.size());
+    for (size_t i = 0; i < enemies.size(); ++i) {
+        const int curr_x = static_cast<int>(enemies[i].x);
+        const int curr_y = static_cast<int>(enemies[i].y);
+        enemy_last_dx[i] = curr_x - enemy_prev_x[i];
+        enemy_last_dy[i] = curr_y - enemy_prev_y[i];
+        enemy_prev_x[i] = curr_x;
+        enemy_prev_y[i] = curr_y;
+    }
+
+    fireball_prev_x.resize(fireballs.size());
+    fireball_prev_y.resize(fireballs.size());
+    fireball_last_dx.resize(fireballs.size());
+    fireball_last_dy.resize(fireballs.size());
+    for (size_t i = 0; i < fireballs.size(); ++i) {
+        if (fireballs[i].x == FIREBALL_DEAD && fireballs[i].y == FIREBALL_DEAD) {
+            // Dead slot: no snapshot, no steady motion (kills any stale state
+            // from the previous shot in this slot at the next spawn).
+            fireball_prev_x[i] = -1;
+            fireball_prev_y[i] = -1;
+            fireball_last_dx[i] = 0;
+            fireball_last_dy[i] = 0;
+            continue;
+        }
+        const int curr_x = static_cast<int>(fireballs[i].x);
+        const int curr_y = static_cast<int>(fireballs[i].y);
+        fireball_last_dx[i] = curr_x - fireball_prev_x[i];
+        fireball_last_dy[i] = curr_y - fireball_prev_y[i];
+        fireball_prev_x[i] = curr_x;
+        fireball_prev_y[i] = curr_y;
+    }
+}
+
+void ActorSystem::reset_render_snapshots() {
+    // Snap to the live positions: no extrapolation until the next capture.
+    enemy_prev_x.assign(enemies.size(), -1);
+    enemy_prev_y.assign(enemies.size(), -1);
+    enemy_last_dx.assign(enemies.size(), 0);
+    enemy_last_dy.assign(enemies.size(), 0);
+    fireball_prev_x.assign(fireballs.size(), -1);
+    fireball_prev_y.assign(fireballs.size(), -1);
+    fireball_last_dx.assign(fireballs.size(), 0);
+    fireball_last_dy.assign(fireballs.size(), 0);
+
+    // Follow-smoothing positions snap on their next render too.
+    enemy_render_x.assign(enemies.size(), SMOOTH_RENDER_POS_UNSET);
+    enemy_render_y.assign(enemies.size(), SMOOTH_RENDER_POS_UNSET);
+    fireball_render_x.assign(fireballs.size(), SMOOTH_RENDER_POS_UNSET);
+    fireball_render_y.assign(fireballs.size(), SMOOTH_RENDER_POS_UNSET);
+}
+
+void ActorSystem::render_enemies(GraphicsSystem* graphics_system, float cam_x, int render_scale,
+                                 float smooth_alpha) {
     if (!graphics_system) {
         return;
     }
@@ -269,14 +359,22 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
         return;
     }
 
-    for (const auto& enemy : enemies) {
+    // Keep follow-smoothing positions parallel to the enemy array.
+    if (enemy_render_x.size() < enemies.size()) {
+        enemy_render_x.resize(enemies.size(), SMOOTH_RENDER_POS_UNSET);
+        enemy_render_y.resize(enemies.size(), SMOOTH_RENDER_POS_UNSET);
+    }
+
+    for (size_t enemy_index = 0; enemy_index < enemies.size(); ++enemy_index) {
+        const enemy_t& enemy = enemies[enemy_index];
         if (enemy.state == ENEMY_STATE_DESPAWNED) {
             continue;
         }
 
         // Cull enemies outside the visible viewport; 2-unit margin covers sprite width
-        if (static_cast<int>(enemy.x) < cam_x - 2 ||
-            static_cast<int>(enemy.x) >= cam_x + PLAYFIELD_WIDTH + 2) {
+        // and the sub-unit camera shift the smooth renderer can add.
+        if (static_cast<int>(enemy.x) < static_cast<int>(cam_x) - 3 ||
+            static_cast<int>(enemy.x) >= static_cast<int>(cam_x) + PLAYFIELD_WIDTH + 3) {
             continue;
         }
 
@@ -311,9 +409,20 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
             flip_h = (enemy.facing == ENEMY_FACING_RIGHT);
         }
 
-        const int enemy_screen_x =
-            (static_cast<int>(enemy.x) - cam_x) * render_scale + render_scale;
-        const int enemy_screen_y = static_cast<int>(enemy.y) * render_scale + render_scale;
+        // Steady-motion-gated extrapolation + follow-smoothing (see
+        // render_actor_pos): throttled movers, reversals, and respawns render
+        // the exact post-tick position; steady movers extrapolate.
+        const int prev_x = (enemy_index < enemy_prev_x.size()) ? enemy_prev_x[enemy_index] : -1;
+        const int prev_y = (enemy_index < enemy_prev_y.size()) ? enemy_prev_y[enemy_index] : -1;
+        const int last_dx = (enemy_index < enemy_last_dx.size()) ? enemy_last_dx[enemy_index] : 0;
+        const int last_dy = (enemy_index < enemy_last_dy.size()) ? enemy_last_dy[enemy_index] : 0;
+        const float enemy_smooth_x = render_actor_pos(static_cast<int>(enemy.x), prev_x, last_dx,
+                                                      smooth_alpha, enemy_render_x[enemy_index]);
+        const float enemy_smooth_y = render_actor_pos(static_cast<int>(enemy.y), prev_y, last_dy,
+                                                      smooth_alpha, enemy_render_y[enemy_index]);
+
+        const float enemy_screen_x = (enemy_smooth_x - cam_x) * render_scale + render_scale;
+        const float enemy_screen_y = enemy_smooth_y * render_scale + render_scale;
 
         auto render_enemy_base = [&]() {
             if (!frame_info || !frame_info->texture) {
@@ -328,8 +437,8 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
             sprite.width = frame_info->width;
             sprite.height = frame_info->height;
 
-            graphics_system->render_sprite_centered_scaled(enemy_screen_x, enemy_screen_y, sprite,
-                                                           render_width, render_height, flip_h);
+            graphics_system->render_sprite_centered_scaled_f(enemy_screen_x, enemy_screen_y, sprite,
+                                                             render_width, render_height, flip_h);
         };
 
         if (enemy.state == ENEMY_STATE_SPAWNED) {
@@ -367,7 +476,7 @@ void ActorSystem::render_enemies(GraphicsSystem* graphics_system, int cam_x,
                 continue;
             }
 
-            graphics_system->render_sprite_centered_scaled(
+            graphics_system->render_sprite_centered_scaled_f(
                 enemy_screen_x, enemy_screen_y, *spark_sprite, render_scale * 2, render_scale * 2);
         }
     }
@@ -1494,10 +1603,16 @@ void ActorSystem::handle_fireballs() {
  * Render all active fireballs.
  * Fireball sprites are 16x8 px originals; rendered at 2× scale → 32x16 screen pixels.
  */
-void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
-                                   int render_scale) const {
+void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, float cam_x, int render_scale,
+                                   float smooth_alpha) {
     if (!graphics_system || comic_firepower == 0) {
         return;
+    }
+
+    // Keep follow-smoothing positions parallel to the fireball array.
+    if (fireball_render_x.size() < fireballs.size()) {
+        fireball_render_x.resize(fireballs.size(), SMOOTH_RENDER_POS_UNSET);
+        fireball_render_y.resize(fireballs.size(), SMOOTH_RENDER_POS_UNSET);
     }
 
     // Scale factor: original sprites are 8 px per game unit; we use render_scale px per unit.
@@ -1506,13 +1621,14 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
     const int sprite_w = 16 * scale;
     const int sprite_h = 8 * scale;
 
-    for (const auto& fb : fireballs) {
+    for (size_t fb_index = 0; fb_index < fireballs.size(); ++fb_index) {
+        const fireball_t& fb = fireballs[fb_index];
         if (fb.x == FIREBALL_DEAD && fb.y == FIREBALL_DEAD) {
             continue;
         }
 
-        int rel_x = static_cast<int>(fb.x) - cam_x;
-        if (rel_x < 0 || rel_x >= PLAYFIELD_WIDTH) {
+        const float rel_x = static_cast<float>(fb.x) - cam_x;
+        if (rel_x < -1.0f || rel_x >= PLAYFIELD_WIDTH + 1.0f) {
             continue;
         }
 
@@ -1522,12 +1638,26 @@ void ActorSystem::render_fireballs(GraphicsSystem* graphics_system, int cam_x,
             continue;
         }
 
-        // Screen position: same mapping as enemies (game unit × render_scale + render_scale offset)
-        int screen_x = rel_x * render_scale + render_scale;
-        int screen_y = static_cast<int>(fb.y) * render_scale + render_scale;
+        // Steady-motion-gated extrapolation + follow-smoothing (see
+        // render_actor_pos). The spawn tick follows the dead-slot snapshot
+        // (-1) so it is never "steady": the fireball renders exactly at its
+        // spawn height instead of gliding from the slot's previous shot.
+        // Corkscrew y-oscillation alternates deltas, so y renders exact too.
+        const int prev_x = (fb_index < fireball_prev_x.size()) ? fireball_prev_x[fb_index] : -1;
+        const int prev_y = (fb_index < fireball_prev_y.size()) ? fireball_prev_y[fb_index] : -1;
+        const int last_dx = (fb_index < fireball_last_dx.size()) ? fireball_last_dx[fb_index] : 0;
+        const int last_dy = (fb_index < fireball_last_dy.size()) ? fireball_last_dy[fb_index] : 0;
+        const float fb_smooth_x = render_actor_pos(static_cast<int>(fb.x), prev_x, last_dx,
+                                                   smooth_alpha, fireball_render_x[fb_index]);
+        const float fb_smooth_y = render_actor_pos(static_cast<int>(fb.y), prev_y, last_dy,
+                                                   smooth_alpha, fireball_render_y[fb_index]);
 
-        graphics_system->render_sprite_centered_scaled(screen_x, screen_y, *sprite, sprite_w,
-                                                       sprite_h);
+        // Screen position: same mapping as enemies (game unit × render_scale + render_scale offset)
+        const float screen_x = (fb_smooth_x - cam_x) * render_scale + render_scale;
+        const float screen_y = fb_smooth_y * render_scale + render_scale;
+
+        graphics_system->render_sprite_centered_scaled_f(screen_x, screen_y, *sprite, sprite_w,
+                                                         sprite_h);
     }
 }
 /* ============================================================================
@@ -1738,7 +1868,8 @@ void ActorSystem::apply_item_effect(uint8_t item_type) {
  * Render the current stage's item if not yet collected.
  * Item sprites are 16×16 pixels (2 game units × 2 game units).
  */
-void ActorSystem::render_item(GraphicsSystem* graphics_system, int cam_x, int render_scale) const {
+void ActorSystem::render_item(GraphicsSystem* graphics_system, float cam_x,
+                              int render_scale) const {
     if (!graphics_system) {
         return;
     }
@@ -1757,8 +1888,8 @@ void ActorSystem::render_item(GraphicsSystem* graphics_system, int cam_x, int re
     }
 
     // Check if item is visible in playfield
-    int rel_x = static_cast<int>(current_item_x) - cam_x;
-    if (rel_x < 0 || rel_x > PLAYFIELD_WIDTH) {
+    const float rel_x = static_cast<float>(current_item_x) - cam_x;
+    if (rel_x < -1.0f || rel_x > PLAYFIELD_WIDTH + 1.0f) {
         return;  // Off-screen
     }
 
@@ -1779,8 +1910,9 @@ void ActorSystem::render_item(GraphicsSystem* graphics_system, int cam_x, int re
     const int sprite_h = 16 * scale;
 
     // Screen position: game unit × render_scale + render_scale offset
-    int screen_x = rel_x * render_scale + render_scale;
-    int screen_y = static_cast<int>(current_item_y) * render_scale + render_scale;
+    const float screen_x = rel_x * render_scale + render_scale;
+    const float screen_y = static_cast<float>(current_item_y) * render_scale + render_scale;
 
-    graphics_system->render_sprite_centered_scaled(screen_x, screen_y, *sprite, sprite_w, sprite_h);
+    graphics_system->render_sprite_centered_scaled_f(screen_x, screen_y, *sprite, sprite_w,
+                                                     sprite_h);
 }

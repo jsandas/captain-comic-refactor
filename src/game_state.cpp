@@ -35,6 +35,13 @@ uint8_t previous_key_state_teleport = 0;  // Track previous teleport key state f
 // --- Camera ---
 int camera_x = 0;
 
+// --- Smooth rendering (extrapolation between game ticks) ---
+bool smooth_rendering_enabled = false;  // --smooth flag / debug F6 toggle
+int smooth_prev_comic_x = 20;           // Matches the comic_x initializer above
+int smooth_prev_camera_x = 0;
+bool smooth_render_snap_requested = false;
+float smooth_frame_delta_ms = 1000.0f / 60.0f;
+
 // --- Items / lives / HP / score ---
 uint8_t comic_has_door_key = 0;              // 1 if player has door key, 0 otherwise
 uint8_t comic_firepower = 0;                 // 0-5: number of fireball slots available

@@ -119,8 +119,12 @@ public:
     /* Load enemy spark effect sprites (white/red, 3 frames each). */
     bool load_effect_sprites(GraphicsSystem* graphics_system);
 
-    /* Render all active fireballs */
-    void render_fireballs(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
+    /* Render all active fireballs. cam_x and smooth_alpha are the extrapolated
+     * camera and tick fraction from the smooth renderer; alpha 0 renders the
+     * exact post-tick integer state. Non-const: maintains follow-smoothing
+     * render positions (see game_state.h). */
+    void render_fireballs(GraphicsSystem* graphics_system, float cam_x, int render_scale,
+                          float smooth_alpha);
 
     /* Reset fireballs (called on stage load) */
     void reset_fireballs();
@@ -139,8 +143,9 @@ public:
     /* Load item sprites from assets (call once after GraphicsSystem is ready) */
     bool load_item_sprites(GraphicsSystem* graphics_system);
 
-    /* Render the current stage's item if not yet collected */
-    void render_item(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
+    /* Render the current stage's item if not yet collected. cam_x is the
+     * (possibly extrapolated) camera from the smooth renderer. */
+    void render_item(GraphicsSystem* graphics_system, float cam_x, int render_scale) const;
 
     /* Apply item effect (public for testing).
      * Static: writes only the game_state.h inventory globals. */
@@ -153,8 +158,23 @@ public:
     void setup_enemies_for_stage(const class level_t* level, int level_index, int stage_number,
                                  GraphicsSystem* graphics_system);
 
-    /* Render enemies for the current frame */
-    void render_enemies(GraphicsSystem* graphics_system, int cam_x, int render_scale) const;
+    /* Render enemies for the current frame. cam_x and smooth_alpha are the
+     * extrapolated camera and tick fraction from the smooth renderer; alpha 0
+     * renders the exact post-tick integer state. Non-const: maintains
+     * follow-smoothing render positions (see game_state.h). */
+    void render_enemies(GraphicsSystem* graphics_system, float cam_x, int render_scale,
+                        float smooth_alpha);
+
+    /* Smooth-render snapshot capture: record enemy/fireball positions as they
+     * are at the START of a game tick, so render_enemies/render_fireballs can
+     * extrapolate (curr - prev) * alpha between ticks. Call at the top of every
+     * game tick (including early-continue branches) so deltas never go stale. */
+    void capture_render_snapshots();
+
+    /* Snap the render snapshots to the live positions (no extrapolation until
+     * the next capture). Called when gameplay requests a snap or when a stage's
+     * enemies are (re)set up, so a position jump is never extrapolated. */
+    void reset_render_snapshots();
 
     /* Check if a specific tile is solid */
     bool is_tile_solid(uint8_t tile_id) const;
@@ -171,6 +191,30 @@ private:
 
     /* Fireball array (max MAX_NUM_FIREBALLS active projectiles) */
     std::vector<fireball_t> fireballs;
+
+    /* Smooth-render snapshots: enemy/fireball positions as of the start of the
+     * most recent game tick, parallel to enemies/fireballs (-1 = no snapshot
+     * or dead fireball slot; the renderer then renders the exact position).
+     * last_dx/dy record the movement of the tick BEFORE the one the prev
+     * arrays span, so the renderer can tell steady motion (delta repeats the
+     * previous delta) from throttled/bouncing/spawning motion, which renders
+     * exact positions instead of extrapolating. */
+    std::vector<int> enemy_prev_x;
+    std::vector<int> enemy_prev_y;
+    std::vector<int> enemy_last_dx;
+    std::vector<int> enemy_last_dy;
+    std::vector<int> fireball_prev_x;
+    std::vector<int> fireball_prev_y;
+    std::vector<int> fireball_last_dx;
+    std::vector<int> fireball_last_dy;
+
+    /* Follow-smoothing render positions, parallel to enemies/fireballs
+     * (SMOOTH_RENDER_POS_UNSET = snap on next render). Kept across frames so a
+     * prediction miss glides out over a few frames instead of popping. */
+    std::vector<float> enemy_render_x;
+    std::vector<float> enemy_render_y;
+    std::vector<float> fireball_render_x;
+    std::vector<float> fireball_render_y;
 
     /* Loaded fireball sprite frames (indexed 0/1, set by load_fireball_sprites) */
     Sprite* fireball_sprite[FIREBALL_NUM_FRAMES];
