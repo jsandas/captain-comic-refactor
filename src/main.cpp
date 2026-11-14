@@ -67,6 +67,8 @@ static CheatKey cheat_key_from_sdl(const SDL_Keycode key) {
             return CheatKey::F4;
         case SDLK_F5:
             return CheatKey::F5;
+        case SDLK_F6:
+            return CheatKey::F6;
         case SDLK_q:
             return CheatKey::Q;
         case SDLK_BACKSPACE:
@@ -452,15 +454,6 @@ int main(int argc, const char* argv[]) {
                 }
                 if (key_matches_binding(key, bindings.teleport)) {
                     key_state_teleport = 1;
-                }
-
-                // Debug toggle for smooth rendering (extrapolation between
-                // ticks). Requesting a snap resyncs the prev-tick snapshots to
-                // the live positions so the first frame after toggling on
-                // never extrapolates from stale state.
-                if (debug_mode && key == SDLK_F6 && e.key.repeat == 0) {
-                    smooth_rendering_enabled = !smooth_rendering_enabled;
-                    smooth_render_snap_requested = true;
                 }
 
                 // Process cheat keys (only active if --debug flag set)

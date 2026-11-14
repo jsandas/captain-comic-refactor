@@ -19,6 +19,7 @@ enum class CheatKey : uint8_t {
     F3,
     F4,
     F5,
+    F6,
     Digit0,
     Digit1,
     Digit2,
@@ -74,6 +75,7 @@ private:
     // Toggle methods
     void toggle_noclip();
     void toggle_debug_overlay();
+    static void toggle_smooth_rendering();
     void activate_level_warp();
     void activate_position_warp();
     void activate_item_grant();

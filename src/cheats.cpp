@@ -20,12 +20,13 @@ constexpr int digit_value(CheatKey key) {
 }
 
 void print_cheat_menu() {
-    std::cout << "[CHEAT] Debug mode enabled. Press F1-F5 for cheats:" << std::endl;
+    std::cout << "[CHEAT] Debug mode enabled. Press F1-F6 for cheats:" << std::endl;
     std::cout << "  F1 - Toggle noclip (walk through walls)" << std::endl;
     std::cout << "  F2 - Level warp (choose level/stage)" << std::endl;
     std::cout << "  F3 - Toggle debug overlay" << std::endl;
     std::cout << "  F4 - Position warp (teleport to coordinates)" << std::endl;
     std::cout << "  F5 - Grant item (testing item effects)" << std::endl;
+    std::cout << "  F6 - Toggle smooth rendering" << std::endl;
 }
 
 }  // namespace
@@ -131,6 +132,10 @@ void CheatSystem::process_input(CheatKey key) {
             activate_item_grant();
             break;
 
+        case CheatKey::F6:
+            toggle_smooth_rendering();
+            break;
+
         default:
             // Not a cheat key
             break;
@@ -147,6 +152,17 @@ void CheatSystem::toggle_noclip() {
 void CheatSystem::toggle_debug_overlay() {
     debug_overlay_active = !debug_overlay_active;
     std::cout << "[CHEAT] Debug overlay " << (debug_overlay_active ? "enabled" : "disabled")
+              << std::endl;
+}
+
+void CheatSystem::toggle_smooth_rendering() {
+    // The renderer reads the smooth_rendering_enabled global every frame (see
+    // game_state.h); requesting a snap resyncs the prev-tick snapshots to the
+    // live positions so the first frame after toggling on never extrapolates
+    // from stale state.
+    smooth_rendering_enabled = !smooth_rendering_enabled;
+    smooth_render_snap_requested = true;
+    std::cout << "[CHEAT] Smooth rendering " << (smooth_rendering_enabled ? "enabled" : "disabled")
               << std::endl;
 }
 
